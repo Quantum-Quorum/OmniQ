@@ -27,6 +27,7 @@ OmniQ is a modern, open-source software library designed for quantum computing r
 
 ```bash
 pip install omniq
+```
 Julia:
 
 Julia

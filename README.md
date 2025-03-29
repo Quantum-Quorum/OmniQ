@@ -21,84 +21,6 @@ OmniQ is a modern, open-source software library designed for quantum computing r
     * **Quantum Cryptography:** Implementations and building blocks for algorithms like Shor's, Grover's, and QKD protocols.
 * (Add other key features as they are developed)
 
-## Installation
-
-**Python:**
-
-```bash
-pip install omniq
-```
-Julia:
-
-Julia
-
-using Pkg
-Pkg.add("OmniQ") # Or Pkg.add(url="<link_to_omniq_julia_repo>")
-C Interface:
-
-(Provide instructions on how to compile/link against the OmniQ C library, including necessary headers and linking flags. Specify dependencies like compilers, CMake, etc.)
-
-Bash
-
-# Example (placeholder)
-git clone [https://github.com/](https://github.com/)<your_org>/omniq.git
-cd omniq/core # Assuming C core is here
-mkdir build && cd build
-cmake ..
-make install
-# Link your C application with -lomniqcore (or similar)
-Quick Start
-Here's a simple example creating a Bell state (|00> + |11>) / sqrt(2) and measuring it:
-
-Python:
-
-```python
-import omniq as oq
-
-# Select a device (e.g., a built-in simulator)
-dev = oq.device("default.qubit", wires=2)
-
-# Define the quantum function (QNode)
-@oq.qnode(dev)
-def create_bell_state():
-    oq.Hadamard(wires=0)
-    oq.CNOT(wires=[0, 1])
-    return oq.expval(oq.PauliZ(0) @ oq.PauliZ(1)), oq.probs(wires=[0, 1])
-
-# Execute the circuit
-zz_expval, probabilities = create_bell_state()
-
-print(f"Expectation value <Z0*Z1>: {zz_expval}")
-print(f"Probabilities (|00>, |01>, |10>, |11>): {probabilities}")
-```
-# Expected Output (approx):
-# Expectation value <Z0*Z1>: 1.0
-# Probabilities (|00>, |01>, |10>, |11>): [0.5 0.  0.  0.5]
-Julia:
-
-```julia
-
-using OmniQ
-
-# Select a device
-dev = OmniQ.Device("default.qubit", wires=2)
-
-# Define the quantum function
-@qnode dev function create_bell_state()
-    OmniQ.Hadamard(wires=0)
-    OmniQ.CNOT(wires=[0, 1])
-    return OmniQ.Expval(OmniQ.PauliZ(0) * OmniQ.PauliZ(1)), OmniQ.Probs(wires=[0, 1])
-end
-
-# Execute
-zz_expval, probabilities = create_bell_state()
-
-println("Expectation value <Z0*Z1>: $zz_expval")
-println("Probabilities (|00>, |01>, |10>, |11>): $probabilities")
-# Expected Output (approx):
-# Expectation value <Z0*Z1>: 1.0
-# Probabilities (|00>, |01>, |10>, |11>): [0.5, 0.0, 0.0, 0.5]
-```
 Core Concepts
 (Explain the main abstractions used in OmniQ, e.g.:)
 
@@ -166,28 +88,6 @@ Reporting issues on the GitHub Issue Tracker.
 Roadmap
 (Outline future plans, e.g., support for new algorithms, hardware backends, performance optimizations, advanced features)
 
-Enhanced C core performance.
-Support for [Algorithm X, Backend Y].
-Improved error handling and mitigation tools.
-More comprehensive QML and Crypto modules.
 License
 OmniQ is released under the [Your Chosen License, e.g., Apache License 2.0]. See the LICENSE file for details.
 
-Citation
-If you use OmniQ in your research, please cite it as follows:
-
-(Provide a BibTeX entry or preferred citation format once you have a paper or persistent identifier like a DOI via Zenodo)
-
-Code snippet
-
-@misc{omniq_software,
-  author       = {OmniQ Developers},
-  title        = {OmniQ: Seamless Quantum Programming Across Python, Julia, and C},
-  year         = TDB,
-  publisher    = {Zenodo},
-  doi          = {<DOI from Zenodo, if applicable>},
-  url          = {[https://github.com/](https://github.com/)<your_org>/omniq}
-}
-Contact & Support
-Issues: GitHub Issue Tracker
-Discussion: (Link to a discussion forum, Slack channel, etc., if you set one up)

@@ -52,8 +52,7 @@ Here's a simple example creating a Bell state (|00> + |11>) / sqrt(2) and measur
 
 Python:
 
-Python
-
+```python
 import omniq as oq
 
 # Select a device (e.g., a built-in simulator)
@@ -71,12 +70,13 @@ zz_expval, probabilities = create_bell_state()
 
 print(f"Expectation value <Z0*Z1>: {zz_expval}")
 print(f"Probabilities (|00>, |01>, |10>, |11>): {probabilities}")
+```
 # Expected Output (approx):
 # Expectation value <Z0*Z1>: 1.0
 # Probabilities (|00>, |01>, |10>, |11>): [0.5 0.  0.  0.5]
 Julia:
 
-Julia
+```julia
 
 using OmniQ
 
@@ -98,6 +98,7 @@ println("Probabilities (|00>, |01>, |10>, |11>): $probabilities")
 # Expected Output (approx):
 # Expectation value <Z0*Z1>: 1.0
 # Probabilities (|00>, |01>, |10>, |11>): [0.5, 0.0, 0.0, 0.5]
+```
 Core Concepts
 (Explain the main abstractions used in OmniQ, e.g.:)
 
@@ -180,9 +181,9 @@ If you use OmniQ in your research, please cite it as follows:
 Code snippet
 
 @misc{omniq_software,
-  author       = {<Your Name/Org Name> and The OmniQ Developers},
+  author       = {OmniQ Developers},
   title        = {OmniQ: Seamless Quantum Programming Across Python, Julia, and C},
-  year         = {<Year of first release>},
+  year         = TDB,
   publisher    = {Zenodo},
   doi          = {<DOI from Zenodo, if applicable>},
   url          = {[https://github.com/](https://github.com/)<your_org>/omniq}

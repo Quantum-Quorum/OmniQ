@@ -6,3 +6,10 @@
 #define CIRCUIT_H
 
 #endif //CIRCUIT_H
+
+class Circuit {
+    public:
+    Circuit(int num_qubits);
+    Circuit(List<Operations> operations);
+
+};

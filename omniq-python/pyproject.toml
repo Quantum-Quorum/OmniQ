@@ -67,8 +67,8 @@ Repository = "https://github.com/Quantum-Quorum/OmniQ.git"
 "Bug Tracker" = "https://github.com/Quantum-Quorum/OmniQ/issues"
 "Source Code" = "https://github.com/Quantum-Quorum/OmniQ"
 
-[project.scripts]
-omniq = "omniq.cli:main"
+# [project.scripts]
+# omniq = "omniq.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

@@ -8,6 +8,8 @@
 #include "libomniq-core/include/omniq/QuantumStates.h"
 #include <cmath>
 #include <random>
+#include <chrono>
+#include <algorithm>
 
 using namespace omniq;
 using ::testing::DoubleNear;

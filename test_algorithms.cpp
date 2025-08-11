@@ -2,6 +2,8 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
+#include <gtest/gtest.h>
+#include <gmock/gmock.h>
 #include "libomniq-core/include/omniq/Circuit.h"
 #include "libomniq-core/src/modules/algorithms/Grovers.h"
 #include "libomniq-core/src/modules/algorithms/QPE.h"
@@ -9,12 +11,13 @@
 #include <iomanip>
 #include <vector>
 #include <map>
+#include <cmath>
 
 using namespace omniq;
+using ::testing::DoubleNear;
+using ::testing::ElementsAre;
 
-void test_grovers_database_search() {
-    std::cout << "=== Testing Grover's Algorithm - Database Search ===" << std::endl;
-    
+TEST(GroversAlgorithmTest, DatabaseSearch) {
     // Create a simple database search oracle
     int target_value = 5; // Search for value 5
     auto oracle = grover_utils::create_database_oracle(target_value);
@@ -22,11 +25,11 @@ void test_grovers_database_search() {
     // Create Grover's algorithm with 4 qubits (16 possible values)
     GroversAlgorithm grover(4, oracle, 1);
     
-    std::cout << "Number of qubits: " << grover.get_num_qubits() << std::endl;
-    std::cout << "Number of solutions: " << grover.get_num_solutions() << std::endl;
-    std::cout << "Optimal iterations: " << grover.get_optimal_iterations() << std::endl;
-    std::cout << "Expected success probability: " << std::fixed << std::setprecision(4) 
-              << grover.get_success_probability() << std::endl;
+    EXPECT_EQ(grover.get_num_qubits(), 4);
+    EXPECT_EQ(grover.get_num_solutions(), 1);
+    EXPECT_GT(grover.get_optimal_iterations(), 0);
+    EXPECT_GT(grover.get_success_probability(), 0.0);
+    EXPECT_LE(grover.get_success_probability(), 1.0);
     
     // Execute with measurements
     std::vector<int> results = grover.execute_with_measurements(100);
@@ -37,26 +40,11 @@ void test_grovers_database_search() {
         result_counts[result]++;
     }
     
-    std::cout << "Measurement results (top 5):" << std::endl;
-    int count = 0;
-    for (const auto& pair : result_counts) {
-        if (count++ < 5) {
-            std::cout << "  Value " << pair.first << ": " << pair.second << " times" << std::endl;
-        }
-    }
-    
-    // Check if target was found
-    if (result_counts.find(target_value) != result_counts.end()) {
-        std::cout << "✓ Target value " << target_value << " found " 
-                  << result_counts[target_value] << " times!" << std::endl;
-    } else {
-        std::cout << "✗ Target value " << target_value << " not found" << std::endl;
-    }
+    // Check if target was found (should be found with high probability)
+    EXPECT_GT(result_counts[target_value], 0);
 }
 
-void test_grovers_sat() {
-    std::cout << "\n=== Testing Grover's Algorithm - SAT Problem ===" << std::endl;
-    
+TEST(GroversAlgorithmTest, SATProblem) {
     // Create a simple SAT problem: (x1 OR x2) AND (NOT x1 OR x2)
     std::vector<std::vector<int>> clauses = {
         {1, 2},    // x1 OR x2
@@ -69,9 +57,8 @@ void test_grovers_sat() {
     // Create Grover's algorithm
     GroversAlgorithm grover(num_variables, oracle, 1);
     
-    std::cout << "SAT problem: (x1 OR x2) AND (NOT x1 OR x2)" << std::endl;
-    std::cout << "Number of variables: " << num_variables << std::endl;
-    std::cout << "Optimal iterations: " << grover.get_optimal_iterations() << std::endl;
+    EXPECT_EQ(grover.get_num_qubits(), num_variables);
+    EXPECT_GT(grover.get_optimal_iterations(), 0);
     
     // Execute with measurements
     std::vector<int> results = grover.execute_with_measurements(50);
@@ -82,22 +69,11 @@ void test_grovers_sat() {
         result_counts[result]++;
     }
     
-    std::cout << "SAT solutions found:" << std::endl;
-    for (const auto& pair : result_counts) {
-        if (pair.second > 0) {
-            std::cout << "  Assignment " << pair.first << " (";
-            for (int i = 0; i < num_variables; ++i) {
-                std::cout << ((pair.first >> i) & 1);
-                if (i < num_variables - 1) std::cout << ", ";
-            }
-            std::cout << "): " << pair.second << " times" << std::endl;
-        }
-    }
+    // Should find at least one solution
+    EXPECT_GT(result_counts.size(), 0);
 }
 
-void test_qpe_phase_estimation() {
-    std::cout << "\n=== Testing Quantum Phase Estimation ===" << std::endl;
-    
+TEST(QPETest, PhaseEstimation) {
     // Create a simple phase rotation unitary
     double true_phase = 0.25; // 1/4 of 2π
     auto unitary = qpe_utils::create_phase_rotation_unitary(2.0 * M_PI * true_phase);
@@ -105,51 +81,30 @@ void test_qpe_phase_estimation() {
     // Create QPE with 4 precision qubits and 1 eigenstate qubit
     QPE qpe(4, 1, unitary);
     
-    std::cout << "True phase: " << std::fixed << std::setprecision(4) << true_phase << std::endl;
-    std::cout << "Number of precision qubits: " << qpe.get_num_precision_qubits() << std::endl;
-    std::cout << "Number of eigenstate qubits: " << qpe.get_num_eigenstate_qubits() << std::endl;
-    std::cout << "Total qubits: " << qpe.get_total_qubits() << std::endl;
-    std::cout << "Expected precision: " << qpe_utils::estimate_precision(qpe.get_num_precision_qubits()) 
-              << " bits" << std::endl;
+    EXPECT_EQ(qpe.get_num_precision_qubits(), 4);
+    EXPECT_EQ(qpe.get_num_eigenstate_qubits(), 1);
+    EXPECT_EQ(qpe.get_total_qubits(), 5);
     
     // Execute with measurements
     std::vector<double> phase_estimates = qpe.execute_with_measurements(100);
     
     // Calculate statistics
     double sum = 0.0;
-    double sum_sq = 0.0;
     for (double phase : phase_estimates) {
         sum += phase;
-        sum_sq += phase * phase;
     }
     
     double mean = sum / phase_estimates.size();
-    double variance = (sum_sq / phase_estimates.size()) - (mean * mean);
-    double std_dev = std::sqrt(variance);
     
-    std::cout << "Phase estimation results:" << std::endl;
-    std::cout << "  Mean: " << std::fixed << std::setprecision(4) << mean << std::endl;
-    std::cout << "  Standard deviation: " << std::fixed << std::setprecision(4) << std_dev << std::endl;
-    std::cout << "  Error: " << std::fixed << std::setprecision(4) << std::abs(mean - true_phase) << std::endl;
-    
-    // Check if estimation is reasonable
-    double error_threshold = 0.1; // 10% error tolerance
-    if (std::abs(mean - true_phase) < error_threshold) {
-        std::cout << "✓ Phase estimation successful!" << std::endl;
-    } else {
-        std::cout << "✗ Phase estimation failed" << std::endl;
-    }
+    // Check if estimation is reasonable (within 10% of true phase)
+    double error_threshold = 0.1;
+    EXPECT_LT(std::abs(mean - true_phase), error_threshold);
 }
 
-void test_qft() {
-    std::cout << "\n=== Testing Quantum Fourier Transform ===" << std::endl;
-    
+TEST(QFTTest, QFTAndInverse) {
     // Create a simple state
     Statevector state(2);
     state[0] = std::complex<double>(1.0, 0.0); // |00⟩ state
-    
-    std::cout << "Initial state:" << std::endl;
-    std::cout << state.to_string() << std::endl;
     
     // Apply QFT
     Circuit qft_circuit = Circuit(2);
@@ -158,9 +113,6 @@ void test_qft() {
     
     Statevector result = qft_circuit.execute_statevector(state);
     
-    std::cout << "After QFT:" << std::endl;
-    std::cout << result.to_string() << std::endl;
-    
     // Apply inverse QFT
     Circuit inv_qft_circuit = Circuit(2);
     auto inv_qft_gate = std::make_shared<QFTGate>(2, true);
@@ -168,41 +120,17 @@ void test_qft() {
     
     Statevector final_result = inv_qft_circuit.execute_statevector(result);
     
-    std::cout << "After inverse QFT:" << std::endl;
-    std::cout << final_result.to_string() << std::endl;
-    
     // Check if we got back to the original state
     double fidelity = 0.0;
     for (size_t i = 0; i < state.size(); ++i) {
         fidelity += std::abs(std::conj(state[i]) * final_result[i]);
     }
     
-    std::cout << "Fidelity with original state: " << std::fixed << std::setprecision(6) 
-              << std::real(fidelity) << std::endl;
-    
-    if (std::real(fidelity) > 0.99) {
-        std::cout << "✓ QFT and inverse QFT working correctly!" << std::endl;
-    } else {
-        std::cout << "✗ QFT and inverse QFT not working correctly" << std::endl;
-    }
+    // Should have high fidelity (> 0.99)
+    EXPECT_GT(std::real(fidelity), 0.99);
 }
 
-int main() {
-    std::cout << "OmniQ Quantum Algorithms Test" << std::endl;
-    std::cout << "=============================" << std::endl;
-    
-    try {
-        test_grovers_database_search();
-        test_grovers_sat();
-        test_qpe_phase_estimation();
-        test_qft();
-        
-        std::cout << "\n=== All Algorithm Tests Completed! ===" << std::endl;
-        
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
-    
-    return 0;
+int main(int argc, char **argv) {
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 } 

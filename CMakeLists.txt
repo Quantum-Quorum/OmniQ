@@ -109,13 +109,6 @@ install(FILES
     DESTINATION lib/cmake/OmniQ
 )
 
-# Enable testing
-enable_testing()
-
-# Add tests
-add_test(NAME CoreTest COMMAND test_core)
-add_test(NAME AlgorithmsTest COMMAND test_algorithms)
-
 # Print configuration summary
 message(STATUS "OmniQ Configuration:")
 message(STATUS "  Version: ${PROJECT_VERSION}")

@@ -16,10 +16,58 @@
 #include <memory>
 #include <complex>
 
-// Forward declarations for simplified version
+// Real quantum computing backend
+#include <Eigen/Dense>
+#include <vector>
+#include <complex>
+#include <random>
+
 namespace omniq {
     enum class GateType {
         H, X, Y, Z, CNOT, SWAP, PHASE, RX, RY, RZ
+    };
+    
+    using Matrix2cd = Eigen::Matrix2cd;
+    using Matrix4cd = Eigen::Matrix4cd;
+    using MatrixXcd = Eigen::MatrixXcd;
+    using VectorXcd = Eigen::VectorXcd;
+    
+    // Quantum state representation
+    class QuantumState {
+    private:
+        VectorXcd stateVector_;
+        int numQubits_;
+        
+        MatrixXcd createSingleQubitGate(GateType type, int qubit, double parameter);
+        MatrixXcd createTwoQubitGate(GateType type, int qubit1, int qubit2, double parameter);
+        
+    public:
+        explicit QuantumState(int numQubits);
+        void applyGate(GateType type, int qubit, double parameter = 0.0);
+        void applyGate(GateType type, int control, int target, double parameter = 0.0);
+        double getQubitProbability(int qubit, int value) const;
+        std::complex<double> getQubitAmplitude(int qubit, int value) const;
+        VectorXcd getStateVector() const { return stateVector_; }
+        int getNumQubits() const { return numQubits_; }
+        void reset();
+    };
+    
+    // Quantum circuit representation
+    class QuantumCircuit {
+    private:
+        std::vector<std::tuple<GateType, int, int, double>> gates_; // type, qubit1, qubit2, parameter
+        int numQubits_;
+        int currentStep_;
+        
+    public:
+        explicit QuantumCircuit(int numQubits);
+        void addGate(GateType type, int qubit, double parameter = 0.0);
+        void addGate(GateType type, int control, int target, double parameter = 0.0);
+        bool executeStep(QuantumState& state);
+        void reset();
+        int getCurrentStep() const { return currentStep_; }
+        int getTotalSteps() const { return static_cast<int>(gates_.size()); }
+        std::string getGateDescription(int step) const;
     };
 }
 
@@ -133,6 +181,10 @@ signals:
     void errorOccurred(const QString &error);
 
 private:
+    // Real quantum backend
+    std::unique_ptr<omniq::QuantumCircuit> circuit_;
+    std::unique_ptr<omniq::QuantumState> currentState_;
+    
     int currentStep_;
     int totalSteps_;
     QString lastError_;

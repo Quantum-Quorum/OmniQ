@@ -3,536 +3,470 @@
 //
 
 #include "omniq/Circuit.h"
+#include "omniq/Operators.h"
 #include <algorithm>
 #include <stdexcept>
 #include <sstream>
-#include <iostream>
+#include <iomanip>
 
 namespace omniq {
 
-// Gate implementation
-Gate::Gate(GateType type, const std::vector<int>& qubits, 
-           const std::vector<double>& parameters, const std::string& name)
-    : type_(type), qubits_(qubits), parameters_(parameters), name_(name) {
-}
-
-// Measurement implementation
-Measurement::Measurement(int qubit, const std::string& basis, const std::string& observable)
-    : qubit_(qubit), basis_(basis), observable_(observable) {
-}
-
-int Measurement::execute(Statevector& state) const {
-    return state.measure(qubit_);
-}
-
-double Measurement::execute_expectation(DensityMatrix& state) const {
-    return state.measure_expectation(qubit_, observable_);
-}
-
-std::string Measurement::to_string() const {
-    std::ostringstream oss;
-    oss << "measure(" << qubit_ << ", " << basis_ << ", " << observable_ << ")";
-    return oss.str();
-}
-
-// Circuit implementation
-Circuit::Circuit(int num_qubits, int num_classical_bits)
-    : num_qubits_(num_qubits), num_classical_bits_(num_classical_bits) {
-    if (num_qubits < 0) {
-        throw std::invalid_argument("Number of qubits must be non-negative");
+Circuit::Circuit(int numQubits, int numClassicalBits)
+    : numQubits_(numQubits)
+    , numClassicalBits_(numClassicalBits)
+    , currentStep_(0)
+{
+    if (numQubits <= 0) {
+        throw std::invalid_argument("Number of qubits must be positive");
     }
+    
+    // Initialize qubit states to |0⟩
+    stateVector_ = VectorXcd::Zero(static_cast<int>(std::pow(2, numQubits)));
+    stateVector_(0) = 1.0; // |0...0⟩ state
+    
+    // Initialize classical bits to 0
+    classicalBits_.resize(numClassicalBits, 0);
 }
 
 Circuit::Circuit(const Circuit& other)
-    : num_qubits_(other.num_qubits_), 
-      num_classical_bits_(other.num_classical_bits_),
-      gates_(other.gates_),
-      measurements_(other.measurements_),
-      custom_gates_(other.custom_gates_) {
+    : numQubits_(other.numQubits_)
+    , numClassicalBits_(other.numClassicalBits_)
+    , gates_(other.gates_)
+    , stateVector_(other.stateVector_)
+    , classicalBits_(other.classicalBits_)
+    , currentStep_(other.currentStep_)
+{
 }
 
 Circuit& Circuit::operator=(const Circuit& other) {
     if (this != &other) {
-        num_qubits_ = other.num_qubits_;
-        num_classical_bits_ = other.num_classical_bits_;
+        numQubits_ = other.numQubits_;
+        numClassicalBits_ = other.numClassicalBits_;
         gates_ = other.gates_;
-        measurements_ = other.measurements_;
-        custom_gates_ = other.custom_gates_;
+        stateVector_ = other.stateVector_;
+        classicalBits_ = other.classicalBits_;
+        currentStep_ = other.currentStep_;
     }
     return *this;
 }
 
-// Circuit construction
-void Circuit::add_gate(std::shared_ptr<Gate> gate) {
-    if (!gate) {
-        throw std::invalid_argument("Gate cannot be null");
-    }
-    
-    // Validate qubit indices
-    for (int qubit : gate->get_qubits()) {
-        if (qubit < 0 || qubit >= num_qubits_) {
-            throw std::invalid_argument("Qubit index out of range");
-        }
-    }
+void Circuit::addGate(const Gate& gate) {
+    // Validate gate
+    validateGate(gate);
     
     gates_.push_back(gate);
 }
 
-void Circuit::add_measurement(std::shared_ptr<Measurement> measurement) {
-    if (!measurement) {
-        throw std::invalid_argument("Measurement cannot be null");
-    }
+void Circuit::addGate(GateType type, int targetQubit, double parameter) {
+    Gate gate;
+    gate.type = type;
+    gate.targetQubits = {targetQubit};
+    gate.parameters = {parameter};
     
-    if (measurement->get_qubit() < 0 || measurement->get_qubit() >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+    addGate(gate);
+}
+
+void Circuit::addGate(GateType type, int controlQubit, int targetQubit, double parameter) {
+    Gate gate;
+    gate.type = type;
+    gate.controlQubits = {controlQubit};
+    gate.targetQubits = {targetQubit};
+    gate.parameters = {parameter};
     
-    measurements_.push_back(measurement);
+    addGate(gate);
 }
 
-void Circuit::add_hadamard(int qubit) {
-    add_gate(std::make_shared<HadamardGate>(qubit));
-}
-
-void Circuit::add_pauli_x(int qubit) {
-    add_gate(std::make_shared<PauliXGate>(qubit));
-}
-
-void Circuit::add_pauli_y(int qubit) {
-    add_gate(std::make_shared<PauliYGate>(qubit));
-}
-
-void Circuit::add_pauli_z(int qubit) {
-    add_gate(std::make_shared<PauliZGate>(qubit));
-}
-
-void Circuit::add_cnot(int control, int target) {
-    add_gate(std::make_shared<CNOTGate>(control, target));
-}
-
-void Circuit::add_swap(int qubit1, int qubit2) {
-    // Implement SWAP as three CNOTs
-    add_cnot(qubit1, qubit2);
-    add_cnot(qubit2, qubit1);
-    add_cnot(qubit1, qubit2);
-}
-
-void Circuit::add_phase_shift(int qubit, double angle) {
-    add_gate(std::make_shared<PhaseShiftGate>(qubit, angle));
-}
-
-void Circuit::add_rotation_x(int qubit, double angle) {
-    add_gate(std::make_shared<RotationXGate>(qubit, angle));
-}
-
-void Circuit::add_rotation_y(int qubit, double angle) {
-    add_gate(std::make_shared<RotationYGate>(qubit, angle));
-}
-
-void Circuit::add_rotation_z(int qubit, double angle) {
-    add_gate(std::make_shared<RotationZGate>(qubit, angle));
-}
-
-void Circuit::add_measurement(int qubit, const std::string& basis) {
-    add_measurement(std::make_shared<Measurement>(qubit, basis));
-}
-
-// Custom gates
-void Circuit::add_custom_gate(const std::string& name, std::shared_ptr<Gate> gate) {
-    if (name.empty()) {
-        throw std::invalid_argument("Gate name cannot be empty");
-    }
-    custom_gates_[name] = gate;
-}
-
-void Circuit::apply_custom_gate(const std::string& name, const std::vector<int>& qubits) {
-    auto it = custom_gates_.find(name);
-    if (it == custom_gates_.end()) {
-        throw std::invalid_argument("Custom gate not found: " + name);
-    }
+void Circuit::addGate(GateType type, const std::vector<int>& targetQubits, const std::vector<double>& parameters) {
+    Gate gate;
+    gate.type = type;
+    gate.targetQubits = targetQubits;
+    gate.parameters = parameters;
     
-    // Create a copy of the custom gate with the specified qubits
-    auto gate = it->second;
-    // Note: This is a simplified implementation. In practice, you'd need to
-    // properly map the qubits and parameters.
-    add_gate(gate);
+    addGate(gate);
 }
 
-// Circuit execution
-Statevector Circuit::execute_statevector(const Statevector& initial_state) const {
-    Statevector state = initial_state;
-    
-    if (state.get_num_qubits() == 0) {
-        // Create default state if none provided
-        state = Statevector(num_qubits_);
-    } else if (state.get_num_qubits() != num_qubits_) {
-        throw std::invalid_argument("Initial state qubit count mismatch");
-    }
-    
-    // Apply all gates
-    for (const auto& gate : gates_) {
-        gate->apply(state);
-    }
-    
-    return state;
-}
-
-DensityMatrix Circuit::execute_density_matrix(const DensityMatrix& initial_state) const {
-    DensityMatrix state = initial_state;
-    
-    if (state.get_num_qubits() == 0) {
-        // Create default state if none provided
-        state = DensityMatrix(num_qubits_);
-    } else if (state.get_num_qubits() != num_qubits_) {
-        throw std::invalid_argument("Initial state qubit count mismatch");
-    }
-    
-    // Apply all gates
-    for (const auto& gate : gates_) {
-        gate->apply(state);
-    }
-    
-    return state;
-}
-
-// Circuit analysis
-int Circuit::get_depth() const {
-    if (gates_.empty()) return 0;
-    
-    // Simple depth calculation - in practice, this would be more sophisticated
-    // considering gate dependencies and parallel execution
-    return static_cast<int>(gates_.size());
-}
-
-// Circuit manipulation
-void Circuit::reset() {
-    gates_.clear();
-    measurements_.clear();
-}
-
-void Circuit::remove_gate(size_t index) {
-    if (index >= gates_.size()) {
+void Circuit::removeGate(int index) {
+    if (index < 0 || index >= static_cast<int>(gates_.size())) {
         throw std::out_of_range("Gate index out of range");
     }
+    
     gates_.erase(gates_.begin() + index);
 }
 
-void Circuit::remove_measurement(size_t index) {
-    if (index >= measurements_.size()) {
-        throw std::out_of_range("Measurement index out of range");
+void Circuit::insertGate(int index, const Gate& gate) {
+    if (index < 0 || index > static_cast<int>(gates_.size())) {
+        throw std::out_of_range("Gate index out of range");
     }
-    measurements_.erase(measurements_.begin() + index);
+    
+    validateGate(gate);
+    gates_.insert(gates_.begin() + index, gate);
 }
 
 void Circuit::clear() {
+    gates_.clear();
     reset();
-    custom_gates_.clear();
 }
 
-// Circuit composition
-Circuit Circuit::compose(const Circuit& other) const {
-    if (other.num_qubits_ != num_qubits_) {
-        throw std::invalid_argument("Circuit qubit count mismatch for composition");
-    }
+void Circuit::reset() {
+    // Reset to initial state |0...0⟩
+    stateVector_ = VectorXcd::Zero(static_cast<int>(std::pow(2, numQubits_)));
+    stateVector_(0) = 1.0;
     
-    Circuit result(num_qubits_, num_classical_bits_);
+    // Reset classical bits
+    std::fill(classicalBits_.begin(), classicalBits_.end(), 0);
     
-    // Add gates from this circuit
-    for (const auto& gate : gates_) {
-        result.add_gate(gate);
-    }
-    
-    // Add gates from other circuit
-    for (const auto& gate : other.gates_) {
-        result.add_gate(gate);
-    }
-    
-    // Add measurements from this circuit
-    for (const auto& measurement : measurements_) {
-        result.add_measurement(measurement);
-    }
-    
-    // Add measurements from other circuit
-    for (const auto& measurement : other.measurements_) {
-        result.add_measurement(measurement);
-    }
-    
-    return result;
+    currentStep_ = 0;
 }
 
-Circuit Circuit::tensor_product(const Circuit& other) const {
-    Circuit result(num_qubits_ + other.num_qubits_, 
-                   num_classical_bits_ + other.num_classical_bits_);
-    
-    // Add gates from this circuit (qubit indices remain the same)
-    for (const auto& gate : gates_) {
-        result.add_gate(gate);
+bool Circuit::executeStep() {
+    if (currentStep_ >= static_cast<int>(gates_.size())) {
+        return false; // No more gates to execute
     }
     
-    // Add gates from other circuit (qubit indices need to be shifted)
-    for (const auto& gate : other.gates_) {
-        // Note: This is a simplified implementation. In practice, you'd need to
-        // properly shift the qubit indices for the second circuit.
-        result.add_gate(gate);
-    }
+    const Gate& gate = gates_[currentStep_];
+    applyGate(gate);
+    currentStep_++;
     
-    return result;
+    return true;
 }
 
-// Circuit visualization
-std::string Circuit::to_string() const {
-    std::ostringstream oss;
-    oss << "Circuit(" << num_qubits_ << " qubits, " << num_classical_bits_ << " classical bits)\n";
-    oss << "Gates:\n";
-    
-    for (size_t i = 0; i < gates_.size(); ++i) {
-        oss << "  " << i << ": " << gates_[i]->to_string() << "\n";
+void Circuit::executeAll() {
+    while (executeStep()) {
+        // Continue until all gates are executed
     }
-    
-    oss << "Measurements:\n";
-    for (size_t i = 0; i < measurements_.size(); ++i) {
-        oss << "  " << i << ": " << measurements_[i]->to_string() << "\n";
-    }
-    
-    return oss.str();
 }
 
-std::string Circuit::to_qasm() const {
-    std::ostringstream oss;
-    oss << "OPENQASM 2.0;\n";
-    oss << "include \"qelib1.inc\";\n\n";
-    oss << "qreg q[" << num_qubits_ << "];\n";
-    if (num_classical_bits_ > 0) {
-        oss << "creg c[" << num_classical_bits_ << "];\n\n";
+void Circuit::executeToStep(int step) {
+    if (step < 0 || step > static_cast<int>(gates_.size())) {
+        throw std::out_of_range("Step index out of range");
     }
     
-    for (const auto& gate : gates_) {
-        // Convert gate to QASM format
-        if (gate->get_type() == GateType::HADAMARD) {
-            oss << "h q[" << gate->get_qubits()[0] << "];\n";
-        } else if (gate->get_type() == GateType::PAULI_X) {
-            oss << "x q[" << gate->get_qubits()[0] << "];\n";
-        } else if (gate->get_type() == GateType::CNOT) {
-            oss << "cx q[" << gate->get_qubits()[0] << "],q[" << gate->get_qubits()[1] << "];\n";
+    while (currentStep_ < step) {
+        executeStep();
+    }
+}
+
+void Circuit::applyGate(const Gate& gate) {
+    switch (gate.type) {
+        case GateType::H:
+            applyHadamard(gate.targetQubits[0]);
+            break;
+        case GateType::X:
+            applyPauliX(gate.targetQubits[0]);
+            break;
+        case GateType::Y:
+            applyPauliY(gate.targetQubits[0]);
+            break;
+        case GateType::Z:
+            applyPauliZ(gate.targetQubits[0]);
+            break;
+        case GateType::CNOT:
+            applyCNOT(gate.controlQubits[0], gate.targetQubits[0]);
+            break;
+        case GateType::SWAP:
+            applySWAP(gate.targetQubits[0], gate.targetQubits[1]);
+            break;
+        case GateType::PHASE:
+            applyPhaseShift(gate.targetQubits[0], gate.parameters[0]);
+            break;
+        case GateType::RX:
+            applyRotationX(gate.targetQubits[0], gate.parameters[0]);
+            break;
+        case GateType::RY:
+            applyRotationY(gate.targetQubits[0], gate.parameters[0]);
+            break;
+        case GateType::RZ:
+            applyRotationZ(gate.targetQubits[0], gate.parameters[0]);
+            break;
+        case GateType::MEASURE:
+            performMeasurement(gate.targetQubits[0], gate.controlQubits[0]);
+            break;
+        default:
+            throw std::invalid_argument("Unknown gate type");
+    }
+}
+
+void Circuit::applyHadamard(int qubit) {
+    validateQubitIndex(qubit);
+    
+    MatrixXcd hadamardMatrix = createSingleQubitGate(Operators::HADAMARD, qubit);
+    stateVector_ = hadamardMatrix * stateVector_;
+}
+
+void Circuit::applyPauliX(int qubit) {
+    validateQubitIndex(qubit);
+    
+    MatrixXcd pauliXMatrix = createSingleQubitGate(Operators::PAULI_X, qubit);
+    stateVector_ = pauliXMatrix * stateVector_;
+}
+
+void Circuit::applyPauliY(int qubit) {
+    validateQubitIndex(qubit);
+    
+    MatrixXcd pauliYMatrix = createSingleQubitGate(Operators::PAULI_Y, qubit);
+    stateVector_ = pauliYMatrix * stateVector_;
+}
+
+void Circuit::applyPauliZ(int qubit) {
+    validateQubitIndex(qubit);
+    
+    MatrixXcd pauliZMatrix = createSingleQubitGate(Operators::PAULI_Z, qubit);
+    stateVector_ = pauliZMatrix * stateVector_;
+}
+
+void Circuit::applyCNOT(int controlQubit, int targetQubit) {
+    validateQubitIndex(controlQubit);
+    validateQubitIndex(targetQubit);
+    
+    if (controlQubit == targetQubit) {
+        throw std::invalid_argument("Control and target qubits must be different");
+    }
+    
+    MatrixXcd cnotMatrix = createTwoQubitGate(Operators::CNOT, controlQubit, targetQubit);
+    stateVector_ = cnotMatrix * stateVector_;
+}
+
+void Circuit::applySWAP(int qubit1, int qubit2) {
+    validateQubitIndex(qubit1);
+    validateQubitIndex(qubit2);
+    
+    if (qubit1 == qubit2) {
+        return; // No operation needed
+    }
+    
+    MatrixXcd swapMatrix = createTwoQubitGate(Operators::SWAP, qubit1, qubit2);
+    stateVector_ = swapMatrix * stateVector_;
+}
+
+void Circuit::applyPhaseShift(int qubit, double angle) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd phaseMatrix = Operators::phaseShift(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(phaseMatrix, qubit);
+    stateVector_ = fullMatrix * stateVector_;
+}
+
+void Circuit::applyRotationX(int qubit, double angle) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd rotationMatrix = Operators::rotationX(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    stateVector_ = fullMatrix * stateVector_;
+}
+
+void Circuit::applyRotationY(int qubit, double angle) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd rotationMatrix = Operators::rotationY(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    stateVector_ = fullMatrix * stateVector_;
+}
+
+void Circuit::applyRotationZ(int qubit, double angle) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd rotationMatrix = Operators::rotationZ(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    stateVector_ = fullMatrix * stateVector_;
+}
+
+void Circuit::performMeasurement(int qubit, int classicalBit) {
+    validateQubitIndex(qubit);
+    validateClassicalBitIndex(classicalBit);
+    
+    // Calculate measurement probabilities
+    double prob0 = 0.0;
+    double prob1 = 0.0;
+    
+    int dim = static_cast<int>(std::pow(2, numQubits_));
+    int qubitMask = 1 << qubit;
+    
+    for (int i = 0; i < dim; ++i) {
+        double amplitude = std::norm(stateVector_(i));
+        if (i & qubitMask) {
+            prob1 += amplitude;
+        } else {
+            prob0 += amplitude;
         }
-        // Add more gate types as needed
     }
     
-    for (const auto& measurement : measurements_) {
-        oss << "measure q[" << measurement->get_qubit() << "] -> c[" << measurement->get_qubit() << "];\n";
+    // Normalize probabilities
+    double total = prob0 + prob1;
+    prob0 /= total;
+    prob1 /= total;
+    
+    // Perform measurement (simplified - always measure |0⟩ for deterministic behavior)
+    int measurementResult = 0; // For now, always measure |0⟩
+    classicalBits_[classicalBit] = measurementResult;
+    
+    // Collapse the state vector
+    for (int i = 0; i < dim; ++i) {
+        if ((i & qubitMask) != (measurementResult << qubit)) {
+            stateVector_(i) = 0.0;
+        }
     }
     
-    return oss.str();
+    // Renormalize
+    double norm = stateVector_.norm();
+    if (norm > 1e-12) {
+        stateVector_ /= norm;
+    }
 }
 
-// Circuit optimization
-void Circuit::optimize() {
-    // Simple optimization: remove redundant gates
-    // In practice, this would be much more sophisticated
-    std::vector<std::shared_ptr<Gate>> optimized_gates;
+MatrixXcd Circuit::createSingleQubitGate(const Matrix2cd& gate, int qubit) {
+    int dim = static_cast<int>(std::pow(2, numQubits_));
+    MatrixXcd fullMatrix = MatrixXcd::Identity(dim, dim);
     
-    for (const auto& gate : gates_) {
-        // Skip redundant gates (simplified check)
-        bool is_redundant = false;
+    // Create tensor product with identity matrices for other qubits
+    for (int i = 0; i < numQubits_; ++i) {
+        Matrix2cd currentGate = (i == qubit) ? gate : Operators::IDENTITY;
         
-        // Check if this gate cancels with the previous one
-        if (!optimized_gates.empty()) {
-            auto prev_gate = optimized_gates.back();
-            if (gate->get_type() == prev_gate->get_type() && 
-                gate->get_qubits() == prev_gate->get_qubits()) {
-                // Some gates are self-inverse
-                if (gate->get_type() == GateType::HADAMARD ||
-                    gate->get_type() == GateType::PAULI_X ||
-                    gate->get_type() == GateType::PAULI_Z) {
-                    optimized_gates.pop_back();
-                    is_redundant = true;
+        if (i == 0) {
+            fullMatrix = currentGate;
+        } else {
+            fullMatrix = Operators::tensorProduct(fullMatrix, currentGate);
+        }
+    }
+    
+    return fullMatrix;
+}
+
+MatrixXcd Circuit::createTwoQubitGate(const Matrix4cd& gate, int qubit1, int qubit2) {
+    int dim = static_cast<int>(std::pow(2, numQubits_));
+    MatrixXcd fullMatrix = MatrixXcd::Identity(dim, dim);
+    
+    // For simplicity, we'll create a direct implementation
+    // This is a simplified version - in practice, you'd want a more efficient implementation
+    
+    // Create the full matrix by applying the gate to the appropriate qubits
+    for (int i = 0; i < dim; ++i) {
+        for (int j = 0; j < dim; ++j) {
+            // Extract the states of the two qubits
+            int state1 = (i >> qubit1) & 1;
+            int state2 = (i >> qubit2) & 1;
+            int newState1 = (j >> qubit1) & 1;
+            int newState2 = (j >> qubit2) & 1;
+            
+            // Check if other qubits are the same
+            bool otherQubitsMatch = true;
+            for (int k = 0; k < numQubits_; ++k) {
+                if (k != qubit1 && k != qubit2) {
+                    if (((i >> k) & 1) != ((j >> k) & 1)) {
+                        otherQubitsMatch = false;
+                        break;
+                    }
                 }
             }
-        }
-        
-        if (!is_redundant) {
-            optimized_gates.push_back(gate);
-        }
-    }
-    
-    gates_ = optimized_gates;
-}
-
-void Circuit::decompose_to_basic_gates() {
-    // This would decompose complex gates into basic ones
-    // For now, it's a placeholder
-}
-
-// Circuit validation
-bool Circuit::is_valid() const {
-    return get_validation_errors().empty();
-}
-
-std::vector<std::string> Circuit::get_validation_errors() const {
-    std::vector<std::string> errors;
-    
-    // Check qubit indices
-    for (const auto& gate : gates_) {
-        for (int qubit : gate->get_qubits()) {
-            if (qubit < 0 || qubit >= num_qubits_) {
-                errors.push_back("Gate uses invalid qubit index: " + std::to_string(qubit));
+            
+            if (otherQubitsMatch) {
+                int gateRow = state1 * 2 + state2;
+                int gateCol = newState1 * 2 + newState2;
+                fullMatrix(i, j) = gate(gateRow, gateCol);
+            } else {
+                fullMatrix(i, j) = 0.0;
             }
         }
     }
     
-    for (const auto& measurement : measurements_) {
-        if (measurement->get_qubit() < 0 || measurement->get_qubit() >= num_qubits_) {
-            errors.push_back("Measurement uses invalid qubit index: " + 
-                           std::to_string(measurement->get_qubit()));
-        }
+    return fullMatrix;
+}
+
+void Circuit::validateGate(const Gate& gate) {
+    // Validate target qubits
+    for (int qubit : gate.targetQubits) {
+        validateQubitIndex(qubit);
     }
     
-    return errors;
+    // Validate control qubits
+    for (int qubit : gate.controlQubits) {
+        validateQubitIndex(qubit);
+    }
+    
+    // Check for duplicate qubits
+    std::vector<int> allQubits;
+    allQubits.insert(allQubits.end(), gate.controlQubits.begin(), gate.controlQubits.end());
+    allQubits.insert(allQubits.end(), gate.targetQubits.begin(), gate.targetQubits.end());
+    
+    std::sort(allQubits.begin(), allQubits.end());
+    auto it = std::adjacent_find(allQubits.begin(), allQubits.end());
+    if (it != allQubits.end()) {
+        throw std::invalid_argument("Duplicate qubit indices in gate");
+    }
 }
 
-// Concrete gate implementations
-HadamardGate::HadamardGate(int qubit) 
-    : Gate(GateType::HADAMARD, {qubit}) {
+void Circuit::validateQubitIndex(int qubit) {
+    if (qubit < 0 || qubit >= numQubits_) {
+        throw std::out_of_range("Qubit index out of range");
+    }
 }
 
-void HadamardGate::apply(Statevector& state) const {
-    state.apply_hadamard(qubits_[0]);
+void Circuit::validateClassicalBitIndex(int bit) {
+    if (bit < 0 || bit >= numClassicalBits_) {
+        throw std::out_of_range("Classical bit index out of range");
+    }
 }
 
-void HadamardGate::apply(DensityMatrix& state) const {
-    state.apply_hadamard(qubits_[0]);
+std::string Circuit::toQASM() const {
+    std::stringstream qasm;
+    qasm << "OPENQASM 2.0;\n";
+    qasm << "include \"qelib1.inc\";\n\n";
+    qasm << "qreg q[" << numQubits_ << "];\n";
+    qasm << "creg c[" << numClassicalBits_ << "];\n\n";
+    
+    for (const auto& gate : gates_) {
+        qasm << gateToString(gate) << "\n";
+    }
+    
+    return qasm.str();
 }
 
-std::string HadamardGate::to_string() const {
-    return "H(" + std::to_string(qubits_[0]) + ")";
-}
-
-PauliXGate::PauliXGate(int qubit) 
-    : Gate(GateType::PAULI_X, {qubit}) {
-}
-
-void PauliXGate::apply(Statevector& state) const {
-    state.apply_pauli_x(qubits_[0]);
-}
-
-void PauliXGate::apply(DensityMatrix& state) const {
-    state.apply_pauli_x(qubits_[0]);
-}
-
-std::string PauliXGate::to_string() const {
-    return "X(" + std::to_string(qubits_[0]) + ")";
-}
-
-PauliYGate::PauliYGate(int qubit) 
-    : Gate(GateType::PAULI_Y, {qubit}) {
-}
-
-void PauliYGate::apply(Statevector& state) const {
-    state.apply_pauli_y(qubits_[0]);
-}
-
-void PauliYGate::apply(DensityMatrix& state) const {
-    state.apply_pauli_y(qubits_[0]);
-}
-
-std::string PauliYGate::to_string() const {
-    return "Y(" + std::to_string(qubits_[0]) + ")";
-}
-
-PauliZGate::PauliZGate(int qubit) 
-    : Gate(GateType::PAULI_Z, {qubit}) {
-}
-
-void PauliZGate::apply(Statevector& state) const {
-    state.apply_pauli_z(qubits_[0]);
-}
-
-void PauliZGate::apply(DensityMatrix& state) const {
-    state.apply_pauli_z(qubits_[0]);
-}
-
-std::string PauliZGate::to_string() const {
-    return "Z(" + std::to_string(qubits_[0]) + ")";
-}
-
-CNOTGate::CNOTGate(int control, int target) 
-    : Gate(GateType::CNOT, {control, target}) {
-}
-
-void CNOTGate::apply(Statevector& state) const {
-    state.apply_cnot(qubits_[0], qubits_[1]);
-}
-
-void CNOTGate::apply(DensityMatrix& state) const {
-    state.apply_cnot(qubits_[0], qubits_[1]);
-}
-
-std::string CNOTGate::to_string() const {
-    return "CNOT(" + std::to_string(qubits_[0]) + ", " + std::to_string(qubits_[1]) + ")";
-}
-
-PhaseShiftGate::PhaseShiftGate(int qubit, double angle) 
-    : Gate(GateType::PHASE_SHIFT, {qubit}, {angle}) {
-}
-
-void PhaseShiftGate::apply(Statevector& state) const {
-    state.apply_phase_shift(qubits_[0], parameters_[0]);
-}
-
-void PhaseShiftGate::apply(DensityMatrix& state) const {
-    // Implement for density matrix
-}
-
-std::string PhaseShiftGate::to_string() const {
-    return "P(" + std::to_string(qubits_[0]) + ", " + std::to_string(parameters_[0]) + ")";
-}
-
-RotationXGate::RotationXGate(int qubit, double angle) 
-    : Gate(GateType::ROTATION_X, {qubit}, {angle}) {
-}
-
-void RotationXGate::apply(Statevector& state) const {
-    state.apply_rotation_x(qubits_[0], parameters_[0]);
-}
-
-void RotationXGate::apply(DensityMatrix& state) const {
-    // Implement for density matrix
-}
-
-std::string RotationXGate::to_string() const {
-    return "RX(" + std::to_string(qubits_[0]) + ", " + std::to_string(parameters_[0]) + ")";
-}
-
-RotationYGate::RotationYGate(int qubit, double angle) 
-    : Gate(GateType::ROTATION_Y, {qubit}, {angle}) {
-}
-
-void RotationYGate::apply(Statevector& state) const {
-    state.apply_rotation_y(qubits_[0], parameters_[0]);
-}
-
-void RotationYGate::apply(DensityMatrix& state) const {
-    // Implement for density matrix
-}
-
-std::string RotationYGate::to_string() const {
-    return "RY(" + std::to_string(qubits_[0]) + ", " + std::to_string(parameters_[0]) + ")";
-}
-
-RotationZGate::RotationZGate(int qubit, double angle) 
-    : Gate(GateType::ROTATION_Z, {qubit}, {angle}) {
-}
-
-void RotationZGate::apply(Statevector& state) const {
-    state.apply_rotation_z(qubits_[0], parameters_[0]);
-}
-
-void RotationZGate::apply(DensityMatrix& state) const {
-    // Implement for density matrix
-}
-
-std::string RotationZGate::to_string() const {
-    return "RZ(" + std::to_string(qubits_[0]) + ", " + std::to_string(parameters_[0]) + ")";
+std::string Circuit::gateToString(const Gate& gate) const {
+    std::stringstream ss;
+    
+    switch (gate.type) {
+        case GateType::H:
+            ss << "h q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::X:
+            ss << "x q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::Y:
+            ss << "y q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::Z:
+            ss << "z q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::CNOT:
+            ss << "cx q[" << gate.controlQubits[0] << "], q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::SWAP:
+            ss << "swap q[" << gate.targetQubits[0] << "], q[" << gate.targetQubits[1] << "]";
+            break;
+        case GateType::PHASE:
+            ss << "u1(" << std::fixed << std::setprecision(6) << gate.parameters[0] 
+               << ") q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::RX:
+            ss << "rx(" << std::fixed << std::setprecision(6) << gate.parameters[0] 
+               << ") q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::RY:
+            ss << "ry(" << std::fixed << std::setprecision(6) << gate.parameters[0] 
+               << ") q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::RZ:
+            ss << "rz(" << std::fixed << std::setprecision(6) << gate.parameters[0] 
+               << ") q[" << gate.targetQubits[0] << "]";
+            break;
+        case GateType::MEASURE:
+            ss << "measure q[" << gate.targetQubits[0] << "] -> c[" << gate.controlQubits[0] << "]";
+            break;
+        default:
+            ss << "// Unknown gate type";
+            break;
+    }
+    
+    return ss.str();
 }
 
 } // namespace omniq

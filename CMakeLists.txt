@@ -26,6 +26,8 @@ set(CORE_SOURCES
     libomniq-core/src/common/Statevector.cpp
     libomniq-core/src/common/DensityMatrix.cpp
     libomniq-core/src/common/Circuit.cpp
+    libomniq-core/src/modules/algorithms/Grovers.cpp
+    libomniq-core/src/modules/algorithms/QPE.cpp
 )
 
 # Create the core library
@@ -45,9 +47,12 @@ target_compile_options(omniq-core PRIVATE
 # Link libraries
 target_link_libraries(omniq-core PUBLIC Threads::Threads)
 
-# Create the test executable
+# Create the test executables
 add_executable(test_core test_core.cpp)
 target_link_libraries(test_core PRIVATE omniq-core)
+
+add_executable(test_algorithms test_algorithms.cpp)
+target_link_libraries(test_algorithms PRIVATE omniq-core)
 
 # Create the main executable
 add_executable(omniq main)
@@ -98,8 +103,9 @@ install(FILES
 # Enable testing
 enable_testing()
 
-# Add test
+# Add tests
 add_test(NAME CoreTest COMMAND test_core)
+add_test(NAME AlgorithmsTest COMMAND test_algorithms)
 
 # Print configuration summary
 message(STATUS "OmniQ Configuration:")

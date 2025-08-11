@@ -22,6 +22,7 @@ set(DEBUGGER_SOURCES
     src/main.cpp
     src/MainWindow.cpp
     src/CoreInterface.cpp
+    src/QuantumBackend.cpp
     src/widgets/CircuitView.cpp
     src/widgets/QuantumStateViewer.cpp
     src/widgets/QubitViewer.cpp
@@ -30,10 +31,14 @@ set(DEBUGGER_SOURCES
 # Create executable
 add_executable(omniq-debugger ${DEBUGGER_SOURCES})
 
+# Find Eigen3
+find_package(Eigen3 REQUIRED)
+
 # Link libraries
-target_link_libraries(omniq-debugger PRIVATE 
-    Qt6::Core 
+target_link_libraries(omniq-debugger PRIVATE
+    Qt6::Core
     Qt6::Widgets
+    Eigen3::Eigen
     # OmniQ::omniq-core  # Commented out for now
 )
 

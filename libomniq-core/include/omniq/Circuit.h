@@ -5,223 +5,100 @@
 #ifndef OMNIQ_CIRCUIT_H
 #define OMNIQ_CIRCUIT_H
 
+#include <Eigen/Dense>
 #include <vector>
 #include <string>
-#include <memory>
-#include <map>
-#include <functional>
-#include "QuantumStates.h"
 
 namespace omniq {
 
-// Forward declarations
-class Gate;
-class Measurement;
+using Matrix2cd = Eigen::Matrix2cd;
+using Matrix4cd = Eigen::Matrix4cd;
+using MatrixXcd = Eigen::MatrixXcd;
+using VectorXcd = Eigen::VectorXcd;
 
-/**
- * @brief Enumeration of gate types
- */
 enum class GateType {
-    HADAMARD,
-    PAULI_X,
-    PAULI_Y,
-    PAULI_Z,
-    CNOT,
-    SWAP,
-    PHASE_SHIFT,
-    ROTATION_X,
-    ROTATION_Y,
-    ROTATION_Z,
-    CUSTOM
+    H, X, Y, Z, CNOT, SWAP, PHASE, RX, RY, RZ, MEASURE
 };
 
-/**
- * @brief Base class for quantum gates
- */
-class Gate {
-protected:
-    GateType type_;
-    std::vector<int> qubits_;
-    std::vector<double> parameters_;
-    std::string name_;
-
-public:
-    Gate(GateType type, const std::vector<int>& qubits, 
-         const std::vector<double>& parameters = {}, const std::string& name = "");
-    virtual ~Gate() = default;
-    
-    GateType get_type() const { return type_; }
-    const std::vector<int>& get_qubits() const { return qubits_; }
-    const std::vector<double>& get_parameters() const { return parameters_; }
-    const std::string& get_name() const { return name_; }
-    
-    virtual void apply(Statevector& state) const = 0;
-    virtual void apply(DensityMatrix& state) const = 0;
-    virtual std::string to_string() const = 0;
+struct Gate {
+    GateType type;
+    std::vector<int> controlQubits;
+    std::vector<int> targetQubits;
+    std::vector<double> parameters;
 };
 
-/**
- * @brief Measurement operation
- */
-class Measurement {
-private:
-    int qubit_;
-    std::string basis_;
-    std::string observable_;
-
-public:
-    Measurement(int qubit, const std::string& basis = "computational", 
-                const std::string& observable = "Z");
-    
-    int get_qubit() const { return qubit_; }
-    const std::string& get_basis() const { return basis_; }
-    const std::string& get_observable() const { return observable_; }
-    
-    int execute(Statevector& state) const;
-    double execute_expectation(DensityMatrix& state) const;
-    std::string to_string() const;
-};
-
-/**
- * @brief Quantum circuit representation
- */
 class Circuit {
 private:
-    int num_qubits_;
-    int num_classical_bits_;
-    std::vector<std::shared_ptr<Gate>> gates_;
-    std::vector<std::shared_ptr<Measurement>> measurements_;
-    std::map<std::string, std::shared_ptr<Gate>> custom_gates_;
-    
+    int numQubits_;
+    int numClassicalBits_;
+    std::vector<Gate> gates_;
+    VectorXcd stateVector_;
+    std::vector<int> classicalBits_;
+    int currentStep_;
+
+    // Helper methods
+    void validateGate(const Gate& gate);
+    void validateQubitIndex(int qubit);
+    void validateClassicalBitIndex(int bit);
+    MatrixXcd createSingleQubitGate(const Matrix2cd& gate, int qubit);
+    MatrixXcd createTwoQubitGate(const Matrix4cd& gate, int qubit1, int qubit2);
+    std::string gateToString(const Gate& gate) const;
+
 public:
-    explicit Circuit(int num_qubits, int num_classical_bits = 0);
+    // Constructors
+    explicit Circuit(int numQubits, int numClassicalBits = 0);
     Circuit(const Circuit& other);
     Circuit& operator=(const Circuit& other);
-    
-    // Circuit construction
-    void add_gate(std::shared_ptr<Gate> gate);
-    void add_measurement(std::shared_ptr<Measurement> measurement);
-    void add_hadamard(int qubit);
-    void add_pauli_x(int qubit);
-    void add_pauli_y(int qubit);
-    void add_pauli_z(int qubit);
-    void add_cnot(int control, int target);
-    void add_swap(int qubit1, int qubit2);
-    void add_phase_shift(int qubit, double angle);
-    void add_rotation_x(int qubit, double angle);
-    void add_rotation_y(int qubit, double angle);
-    void add_rotation_z(int qubit, double angle);
-    void add_measurement(int qubit, const std::string& basis = "computational");
-    
-    // Custom gates
-    void add_custom_gate(const std::string& name, std::shared_ptr<Gate> gate);
-    void apply_custom_gate(const std::string& name, const std::vector<int>& qubits);
-    
-    // Circuit execution
-    Statevector execute_statevector(const Statevector& initial_state = Statevector(0)) const;
-    DensityMatrix execute_density_matrix(const DensityMatrix& initial_state = DensityMatrix(0)) const;
-    
-    // Circuit analysis
-    int get_depth() const;
-    int get_gate_count() const { return gates_.size(); }
-    int get_measurement_count() const { return measurements_.size(); }
-    int get_num_qubits() const { return num_qubits_; }
-    int get_num_classical_bits() const { return num_classical_bits_; }
-    
-    // Circuit manipulation
-    void reset();
-    void remove_gate(size_t index);
-    void remove_measurement(size_t index);
+
+    // Gate management
+    void addGate(const Gate& gate);
+    void addGate(GateType type, int targetQubit, double parameter = 0.0);
+    void addGate(GateType type, int controlQubit, int targetQubit, double parameter = 0.0);
+    void addGate(GateType type, const std::vector<int>& targetQubits, const std::vector<double>& parameters = {});
+    void removeGate(int index);
+    void insertGate(int index, const Gate& gate);
     void clear();
-    
-    // Circuit composition
-    Circuit compose(const Circuit& other) const;
-    Circuit tensor_product(const Circuit& other) const;
-    
-    // Circuit visualization
-    std::string to_string() const;
-    std::string to_qasm() const;
-    
-    // Circuit optimization
-    void optimize();
-    void decompose_to_basic_gates();
-    
-    // Circuit validation
-    bool is_valid() const;
-    std::vector<std::string> get_validation_errors() const;
-};
 
-// Concrete gate implementations
-class HadamardGate : public Gate {
-public:
-    explicit HadamardGate(int qubit);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
-};
+    // Circuit execution
+    void reset();
+    bool executeStep();
+    void executeAll();
+    void executeToStep(int step);
 
-class PauliXGate : public Gate {
-public:
-    explicit PauliXGate(int qubit);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
-};
+    // Gate application methods
+    void applyGate(const Gate& gate);
+    void applyHadamard(int qubit);
+    void applyPauliX(int qubit);
+    void applyPauliY(int qubit);
+    void applyPauliZ(int qubit);
+    void applyCNOT(int controlQubit, int targetQubit);
+    void applySWAP(int qubit1, int qubit2);
+    void applyPhaseShift(int qubit, double angle);
+    void applyRotationX(int qubit, double angle);
+    void applyRotationY(int qubit, double angle);
+    void applyRotationZ(int qubit, double angle);
+    void performMeasurement(int qubit, int classicalBit);
 
-class PauliYGate : public Gate {
-public:
-    explicit PauliYGate(int qubit);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
-};
+    // State access
+    const VectorXcd& getStateVector() const { return stateVector_; }
+    VectorXcd& getStateVector() { return stateVector_; }
+    const std::vector<int>& getClassicalBits() const { return classicalBits_; }
+    std::vector<int>& getClassicalBits() { return classicalBits_; }
 
-class PauliZGate : public Gate {
-public:
-    explicit PauliZGate(int qubit);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
-};
+    // Circuit information
+    int getNumQubits() const { return numQubits_; }
+    int getNumClassicalBits() const { return numClassicalBits_; }
+    int getCurrentStep() const { return currentStep_; }
+    int getTotalSteps() const { return static_cast<int>(gates_.size()); }
+    const std::vector<Gate>& getGates() const { return gates_; }
 
-class CNOTGate : public Gate {
-public:
-    CNOTGate(int control, int target);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
-};
+    // Output
+    std::string toQASM() const;
 
-class PhaseShiftGate : public Gate {
-public:
-    PhaseShiftGate(int qubit, double angle);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
-};
-
-class RotationXGate : public Gate {
-public:
-    RotationXGate(int qubit, double angle);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
-};
-
-class RotationYGate : public Gate {
-public:
-    RotationYGate(int qubit, double angle);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
-};
-
-class RotationZGate : public Gate {
-public:
-    RotationZGate(int qubit, double angle);
-    void apply(Statevector& state) const override;
-    void apply(DensityMatrix& state) const override;
-    std::string to_string() const override;
+    // Utility methods
+    double getQubitProbability(int qubit, int value) const;
+    double getQubitExpectation(int qubit, const std::string& observable) const;
+    MatrixXcd getDensityMatrix() const;
 };
 
 } // namespace omniq

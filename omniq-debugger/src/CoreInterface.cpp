@@ -10,8 +10,13 @@
 #include <algorithm>
 #include <random>
 
+// Include Eigen types
+using omniq::VectorXcd;
+
 CoreInterface::CoreInterface(QObject *parent)
     : QObject(parent)
+    , circuit_(nullptr)
+    , currentState_(nullptr)
     , currentStep_(0)
     , totalSteps_(0)
     , isExecuting_(false)
@@ -25,16 +30,21 @@ CoreInterface::~CoreInterface()
 bool CoreInterface::createCircuit(int numQubits, int numClassicalBits)
 {
     try {
-        // Create a simple circuit representation
-        totalSteps_ = numQubits * 2; // Simple example: 2 gates per qubit
+        // Create real quantum circuit and state
+        circuit_ = std::make_unique<omniq::QuantumCircuit>(numQubits);
+        currentState_ = std::make_unique<omniq::QuantumState>(numQubits);
+        
+        // Add some example gates to demonstrate functionality
+        circuit_->addGate(omniq::GateType::H, 0);
+        circuit_->addGate(omniq::GateType::CNOT, 0, 1);
+        circuit_->addGate(omniq::GateType::H, 1);
+        
+        totalSteps_ = circuit_->getTotalSteps();
         currentStep_ = 0;
         isExecuting_ = false;
         
         // Initialize qubit states
-        for (int i = 0; i < numQubits; ++i) {
-            QVector<double> state = {1.0, 0.0, 1.0, 0.0, 0.0, 0.0}; // |0⟩ state
-            qubitStates_[i] = state;
-        }
+        updateQubitStates();
         
         clearError();
         emit circuitChanged();
@@ -96,28 +106,18 @@ QString CoreInterface::getCircuitQASM() const
 
 bool CoreInterface::executeStep(int step)
 {
-    if (!validateStepIndex(step)) {
+    if (!validateStepIndex(step) || !circuit_ || !currentState_) {
         return false;
     }
     
     try {
-        currentStep_ = step;
-        
-        // Simulate some quantum operations
-        if (step == 1) {
-            // Apply Hadamard to qubit 0
-            QVector<double> state = {0.5, 0.5, 0.707, 0.707, M_PI/2, 0.0};
-            qubitStates_[0] = state;
-            emit qubitStateChanged(0);
-        } else if (step == 2) {
-            // Apply CNOT
-            QVector<double> state1 = {0.5, 0.5, 0.707, 0.0, M_PI/2, 0.0};
-            QVector<double> state2 = {0.5, 0.5, 0.707, 0.0, M_PI/2, 0.0};
-            qubitStates_[0] = state1;
-            qubitStates_[1] = state2;
-            emit qubitStateChanged(0);
-            emit qubitStateChanged(1);
+        // Execute steps up to the requested step
+        while (currentStep_ < step && circuit_->executeStep(*currentState_)) {
+            currentStep_++;
         }
+        
+        // Update qubit states after execution
+        updateQubitStates();
         
         emit executionStepChanged(currentStep_);
         emit stateChanged();
@@ -125,9 +125,8 @@ bool CoreInterface::executeStep(int step)
     } catch (const std::exception &e) {
         lastError_ = QString("Execution failed at step %1: %2").arg(step).arg(e.what());
         emit errorOccurred(lastError_);
+        return false;
     }
-    
-    return false;
 }
 
 bool CoreInterface::executeToStep(int step)
@@ -169,11 +168,16 @@ QString CoreInterface::getCurrentStateString() const
 QVector<QComplex> CoreInterface::getCurrentStateVector() const
 {
     QVector<QComplex> result;
-    // Simulate a 4-dimensional state vector for 2 qubits
-    result.append(QComplex(0.707, 0.0));  // |00⟩
-    result.append(QComplex(0.0, 0.0));    // |01⟩
-    result.append(QComplex(0.0, 0.0));    // |10⟩
-    result.append(QComplex(0.707, 0.0));  // |11⟩
+    
+    if (!currentState_) {
+        return result;
+    }
+    
+    VectorXcd stateVector = currentState_->getStateVector();
+    for (int i = 0; i < stateVector.size(); ++i) {
+        result.append(QComplex::fromStdComplex(stateVector(i)));
+    }
+    
     return result;
 }
 
@@ -500,7 +504,35 @@ void CoreInterface::updateCurrentState()
 
 void CoreInterface::updateQubitStates()
 {
-    // Simplified implementation
+    if (!currentState_) {
+        return;
+    }
+    
+    int numQubits = currentState_->getNumQubits();
+    qubitStates_.clear();
+    
+    for (int qubit = 0; qubit < numQubits; ++qubit) {
+        // Get probabilities for |0⟩ and |1⟩ states
+        double prob0 = currentState_->getQubitProbability(qubit, 0);
+        double prob1 = currentState_->getQubitProbability(qubit, 1);
+        
+        // Get amplitudes
+        std::complex<double> amp0 = currentState_->getQubitAmplitude(qubit, 0);
+        std::complex<double> amp1 = currentState_->getQubitAmplitude(qubit, 1);
+        
+        // Calculate Bloch sphere parameters
+        double theta = 2.0 * std::acos(std::sqrt(prob0));
+        double phi = std::arg(amp1) - std::arg(amp0);
+        
+        QVector<double> state = {
+            prob0, prob1,                    // Probabilities
+            amp0.real(), amp0.imag(),        // |0⟩ amplitude
+            amp1.real(), amp1.imag(),        // |1⟩ amplitude
+            theta, phi                       // Bloch sphere parameters
+        };
+        
+        qubitStates_[qubit] = state;
+    }
 }
 
 void CoreInterface::updateEntanglementMeasures()

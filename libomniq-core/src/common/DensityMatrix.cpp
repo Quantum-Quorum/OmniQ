@@ -2,336 +2,356 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
-#include "omniq/QuantumStates.h"
+#include "omniq/DensityMatrix.h"
+#include "omniq/Operators.h"
 #include <cmath>
-#include <algorithm>
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
-#include <random>
 
 namespace omniq {
 
-DensityMatrix::DensityMatrix(int num_qubits) 
-    : QuantumState(num_qubits) {
-    size_t size = 1ULL << num_qubits;
-    matrix_.resize(size, std::vector<std::complex<double>>(size, std::complex<double>(0.0, 0.0)));
-    if (num_qubits > 0) {
-        matrix_[0][0] = std::complex<double>(1.0, 0.0); // |0...0⟩⟨0...0|
+DensityMatrix::DensityMatrix(int numQubits)
+    : numQubits_(numQubits)
+    , densityMatrix_(static_cast<int>(std::pow(2, numQubits)), static_cast<int>(std::pow(2, numQubits)))
+{
+    if (numQubits <= 0) {
+        throw std::invalid_argument("Number of qubits must be positive");
     }
-    is_normalized_ = true;
+    
+    // Initialize to |0...0⟩⟨0...0| state
+    densityMatrix_.setZero();
+    densityMatrix_(0, 0) = 1.0;
 }
 
-DensityMatrix::DensityMatrix(const std::vector<std::vector<std::complex<double>>>& matrix)
-    : QuantumState(static_cast<int>(std::log2(matrix.size()))) {
-    // Validate matrix dimensions
-    if (matrix.size() == 0 || (matrix.size() & (matrix.size() - 1)) != 0) {
-        throw std::invalid_argument("Matrix size must be a power of 2");
+DensityMatrix::DensityMatrix(const MatrixXcd& matrix)
+    : numQubits_(static_cast<int>(std::log2(matrix.rows())))
+    , densityMatrix_(matrix)
+{
+    if (matrix.rows() != matrix.cols() || matrix.rows() == 0 || 
+        (matrix.rows() & (matrix.rows() - 1)) != 0) {
+        throw std::invalid_argument("Density matrix must be square with size power of 2");
     }
     
-    for (const auto& row : matrix) {
-        if (row.size() != matrix.size()) {
-            throw std::invalid_argument("Matrix must be square");
-        }
-    }
-    
-    matrix_ = matrix;
     normalize();
 }
 
+DensityMatrix::DensityMatrix(const Statevector& statevector)
+    : numQubits_(statevector.getNumQubits())
+    , densityMatrix_(statevector.getStateVector() * statevector.getStateVector().adjoint())
+{
+}
+
 DensityMatrix::DensityMatrix(const DensityMatrix& other)
-    : QuantumState(other.num_qubits_), matrix_(other.matrix_) {
-    is_normalized_ = other.is_normalized_;
+    : numQubits_(other.numQubits_)
+    , densityMatrix_(other.densityMatrix_)
+{
 }
 
 DensityMatrix& DensityMatrix::operator=(const DensityMatrix& other) {
     if (this != &other) {
-        num_qubits_ = other.num_qubits_;
-        matrix_ = other.matrix_;
-        is_normalized_ = other.is_normalized_;
+        numQubits_ = other.numQubits_;
+        densityMatrix_ = other.densityMatrix_;
     }
     return *this;
 }
 
-const std::complex<double>& DensityMatrix::operator()(size_t row, size_t col) const {
-    if (row >= matrix_.size() || col >= matrix_.size()) {
-        throw std::out_of_range("Matrix index out of range");
-    }
-    return matrix_[row][col];
-}
-
-std::complex<double>& DensityMatrix::operator()(size_t row, size_t col) {
-    if (row >= matrix_.size() || col >= matrix_.size()) {
-        throw std::out_of_range("Matrix index out of range");
-    }
-    is_normalized_ = false;
-    return matrix_[row][col];
-}
-
 void DensityMatrix::normalize() {
-    double trace = 0.0;
-    for (size_t i = 0; i < matrix_.size(); ++i) {
-        trace += std::real(matrix_[i][i]);
+    double trace = densityMatrix_.trace().real();
+    if (trace > 1e-12) {
+        densityMatrix_ /= trace;
     }
+}
+
+double DensityMatrix::getTrace() const {
+    return densityMatrix_.trace().real();
+}
+
+double DensityMatrix::getPurity() const {
+    MatrixXcd squared = densityMatrix_ * densityMatrix_;
+    return squared.trace().real();
+}
+
+double DensityMatrix::getVonNeumannEntropy() const {
+    Eigen::SelfAdjointEigenSolver<MatrixXcd> solver(densityMatrix_);
+    const VectorXcd& eigenvalues = solver.eigenvalues();
     
-    if (std::abs(trace) > 1e-10) {
-        for (auto& row : matrix_) {
-            for (auto& element : row) {
-                element /= trace;
-            }
+    double entropy = 0.0;
+    for (int i = 0; i < eigenvalues.size(); ++i) {
+        double lambda = eigenvalues(i).real();
+        if (lambda > 1e-12) {
+            entropy -= lambda * std::log2(lambda);
         }
-        is_normalized_ = true;
     }
+    
+    return entropy;
 }
 
-double DensityMatrix::get_norm() const {
-    double trace = 0.0;
-    for (size_t i = 0; i < matrix_.size(); ++i) {
-        trace += std::real(matrix_[i][i]);
-    }
-    return trace;
-}
-
-std::string DensityMatrix::to_string() const {
-    std::ostringstream oss;
-    oss << "DensityMatrix(" << num_qubits_ << " qubits):\n";
-    oss << std::fixed << std::setprecision(4);
+std::string DensityMatrix::toString() const {
+    std::stringstream ss;
+    ss << "Density Matrix (" << numQubits_ << " qubits):\n";
+    ss << std::fixed << std::setprecision(6);
     
-    for (size_t i = 0; i < std::min(size_t(8), matrix_.size()); ++i) {
-        for (size_t j = 0; j < std::min(size_t(8), matrix_.size()); ++j) {
-            oss << std::setw(10) << matrix_[i][j] << " ";
-        }
-        if (matrix_.size() > 8) oss << "...";
-        oss << "\n";
-    }
-    if (matrix_.size() > 8) {
-        oss << "...\n";
-    }
-    
-    return oss.str();
-}
-
-// Quantum operations for density matrix
-void DensityMatrix::apply_hadamard(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
-    
-    size_t mask = 1ULL << qubit;
-    size_t size = matrix_.size();
-    std::vector<std::vector<std::complex<double>>> new_matrix = matrix_;
-    
-    for (size_t i = 0; i < size; ++i) {
-        for (size_t j = 0; j < size; ++j) {
-            bool i_bit = (i & mask) != 0;
-            bool j_bit = (j & mask) != 0;
-            
-            if (i_bit == j_bit) {
-                // Same bit value - no change
-                new_matrix[i][j] = matrix_[i][j];
-            } else {
-                // Different bit values - apply Hadamard transformation
-                size_t i_flipped = i ^ mask;
-                size_t j_flipped = j ^ mask;
-                
-                if (i_bit) {
-                    // i has 1, j has 0
-                    new_matrix[i][j] = (matrix_[i][j] - matrix_[i_flipped][j]) / std::sqrt(2.0);
+    for (int i = 0; i < densityMatrix_.rows(); ++i) {
+        for (int j = 0; j < densityMatrix_.cols(); ++j) {
+            std::complex<double> element = densityMatrix_(i, j);
+            if (std::abs(element) > 1e-12) {
+                ss << "(" << element.real();
+                if (element.imag() >= 0) {
+                    ss << "+" << element.imag() << "i";
                 } else {
-                    // i has 0, j has 1
-                    new_matrix[i][j] = (matrix_[i][j] + matrix_[i_flipped][j]) / std::sqrt(2.0);
+                    ss << element.imag() << "i";
                 }
+                ss << ") ";
+            } else {
+                ss << "(0.000000+0.000000i) ";
             }
         }
+        ss << "\n";
     }
     
-    matrix_ = new_matrix;
-    is_normalized_ = false;
+    return ss.str();
 }
 
-void DensityMatrix::apply_cnot(int control, int target) {
-    if (control < 0 || control >= num_qubits_ || target < 0 || target >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void DensityMatrix::applyHadamard(int qubit) {
+    validateQubitIndex(qubit);
+    
+    MatrixXcd hadamardMatrix = createSingleQubitGate(Operators::HADAMARD, qubit);
+    densityMatrix_ = hadamardMatrix * densityMatrix_ * hadamardMatrix.adjoint();
+}
+
+void DensityMatrix::applyCNOT(int control, int target) {
+    validateQubitIndex(control);
+    validateQubitIndex(target);
+    
     if (control == target) {
         throw std::invalid_argument("Control and target qubits must be different");
     }
     
-    size_t control_mask = 1ULL << control;
-    size_t target_mask = 1ULL << target;
-    size_t size = matrix_.size();
-    
-    for (size_t i = 0; i < size; ++i) {
-        for (size_t j = 0; j < size; ++j) {
-            bool i_control = (i & control_mask) != 0;
-            bool j_control = (j & control_mask) != 0;
-            
-            if (i_control && j_control) {
-                // Both control qubits are 1, flip target
-                size_t i_flipped = i ^ target_mask;
-                size_t j_flipped = j ^ target_mask;
-                std::swap(matrix_[i][j], matrix_[i_flipped][j_flipped]);
-            }
-        }
-    }
+    MatrixXcd cnotMatrix = createTwoQubitGate(Operators::CNOT, control, target);
+    densityMatrix_ = cnotMatrix * densityMatrix_ * cnotMatrix.adjoint();
 }
 
-void DensityMatrix::apply_pauli_x(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void DensityMatrix::applyPauliX(int qubit) {
+    validateQubitIndex(qubit);
     
-    size_t mask = 1ULL << qubit;
-    size_t size = matrix_.size();
-    
-    for (size_t i = 0; i < size; ++i) {
-        for (size_t j = 0; j < size; ++j) {
-            if ((i & mask) != (j & mask)) {
-                // Different bit values, swap
-                size_t i_flipped = i ^ mask;
-                size_t j_flipped = j ^ mask;
-                std::swap(matrix_[i][j], matrix_[i_flipped][j_flipped]);
-            }
-        }
-    }
+    MatrixXcd pauliXMatrix = createSingleQubitGate(Operators::PAULI_X, qubit);
+    densityMatrix_ = pauliXMatrix * densityMatrix_ * pauliXMatrix.adjoint();
 }
 
-void DensityMatrix::apply_pauli_y(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
+void DensityMatrix::applyPauliY(int qubit) {
+    validateQubitIndex(qubit);
+    
+    MatrixXcd pauliYMatrix = createSingleQubitGate(Operators::PAULI_Y, qubit);
+    densityMatrix_ = pauliYMatrix * densityMatrix_ * pauliYMatrix.adjoint();
+}
+
+void DensityMatrix::applyPauliZ(int qubit) {
+    validateQubitIndex(qubit);
+    
+    MatrixXcd pauliZMatrix = createSingleQubitGate(Operators::PAULI_Z, qubit);
+    densityMatrix_ = pauliZMatrix * densityMatrix_ * pauliZMatrix.adjoint();
+}
+
+void DensityMatrix::applyPhaseShift(int qubit, double angle) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd phaseMatrix = Operators::phaseShift(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(phaseMatrix, qubit);
+    densityMatrix_ = fullMatrix * densityMatrix_ * fullMatrix.adjoint();
+}
+
+void DensityMatrix::applyRotationX(int qubit, double angle) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd rotationMatrix = Operators::rotationX(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    densityMatrix_ = fullMatrix * densityMatrix_ * fullMatrix.adjoint();
+}
+
+void DensityMatrix::applyRotationY(int qubit, double angle) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd rotationMatrix = Operators::rotationY(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    densityMatrix_ = fullMatrix * densityMatrix_ * fullMatrix.adjoint();
+}
+
+void DensityMatrix::applyRotationZ(int qubit, double angle) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd rotationMatrix = Operators::rotationZ(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    densityMatrix_ = fullMatrix * densityMatrix_ * fullMatrix.adjoint();
+}
+
+double DensityMatrix::measureExpectation(int qubit, const std::string& observable) {
+    validateQubitIndex(qubit);
+    
+    Matrix2cd obsMatrix;
+    if (observable == "X") {
+        obsMatrix = Operators::PAULI_X;
+    } else if (observable == "Y") {
+        obsMatrix = Operators::PAULI_Y;
+    } else if (observable == "Z") {
+        obsMatrix = Operators::PAULI_Z;
+    } else {
+        throw std::invalid_argument("Unknown observable: " + observable);
     }
     
-    size_t mask = 1ULL << qubit;
-    size_t size = matrix_.size();
-    std::vector<std::vector<std::complex<double>>> new_matrix = matrix_;
+    MatrixXcd fullMatrix = createSingleQubitGate(obsMatrix, qubit);
+    std::complex<double> expectation = (fullMatrix * densityMatrix_).trace();
     
-    for (size_t i = 0; i < size; ++i) {
-        for (size_t j = 0; j < size; ++j) {
-            bool i_bit = (i & mask) != 0;
-            bool j_bit = (j & mask) != 0;
+    return expectation.real();
+}
+
+MatrixXcd DensityMatrix::createSingleQubitGate(const Matrix2cd& gate, int qubit) const {
+    int dim = static_cast<int>(std::pow(2, numQubits_));
+    MatrixXcd fullMatrix = MatrixXcd::Identity(dim, dim);
+    
+    // Create tensor product with identity matrices for other qubits
+    for (int i = 0; i < numQubits_; ++i) {
+        Matrix2cd currentGate = (i == qubit) ? gate : Operators::IDENTITY;
+        
+        if (i == 0) {
+            fullMatrix = currentGate;
+        } else {
+            fullMatrix = Operators::tensorProduct(fullMatrix, currentGate);
+        }
+    }
+    
+    return fullMatrix;
+}
+
+MatrixXcd DensityMatrix::createTwoQubitGate(const Matrix4cd& gate, int qubit1, int qubit2) const {
+    int dim = static_cast<int>(std::pow(2, numQubits_));
+    MatrixXcd fullMatrix = MatrixXcd::Identity(dim, dim);
+    
+    // Create the full matrix by applying the gate to the appropriate qubits
+    for (int i = 0; i < dim; ++i) {
+        for (int j = 0; j < dim; ++j) {
+            // Extract the states of the two qubits
+            int state1 = (i >> qubit1) & 1;
+            int state2 = (i >> qubit2) & 1;
+            int newState1 = (j >> qubit1) & 1;
+            int newState2 = (j >> qubit2) & 1;
             
-            if (i_bit != j_bit) {
-                size_t i_flipped = i ^ mask;
-                size_t j_flipped = j ^ mask;
-                
-                if (i_bit) {
-                    // i has 1, j has 0
-                    new_matrix[i][j] = std::complex<double>(0, -1) * matrix_[i_flipped][j];
-                    new_matrix[i_flipped][j] = std::complex<double>(0, 1) * matrix_[i][j_flipped];
-                } else {
-                    // i has 0, j has 1
-                    new_matrix[i][j] = std::complex<double>(0, 1) * matrix_[i_flipped][j];
-                    new_matrix[i_flipped][j] = std::complex<double>(0, -1) * matrix_[i][j_flipped];
+            // Check if other qubits are the same
+            bool otherQubitsMatch = true;
+            for (int k = 0; k < numQubits_; ++k) {
+                if (k != qubit1 && k != qubit2) {
+                    if (((i >> k) & 1) != ((j >> k) & 1)) {
+                        otherQubitsMatch = false;
+                        break;
+                    }
                 }
             }
-        }
-    }
-    
-    matrix_ = new_matrix;
-}
-
-void DensityMatrix::apply_pauli_z(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
-    
-    size_t mask = 1ULL << qubit;
-    size_t size = matrix_.size();
-    
-    for (size_t i = 0; i < size; ++i) {
-        for (size_t j = 0; j < size; ++j) {
-            bool i_bit = (i & mask) != 0;
-            bool j_bit = (j & mask) != 0;
             
-            if (i_bit != j_bit) {
-                matrix_[i][j] = -matrix_[i][j];
-            }
-        }
-    }
-}
-
-// Measurements
-double DensityMatrix::measure_expectation(int qubit, const std::string& observable) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
-    
-    if (observable == "Z" || observable == "z") {
-        double expectation = 0.0;
-        size_t mask = 1ULL << qubit;
-        
-        for (size_t i = 0; i < matrix_.size(); ++i) {
-            double prob = std::real(matrix_[i][i]);
-            int eigenvalue = (i & mask) ? -1 : 1;
-            expectation += prob * eigenvalue;
-        }
-        
-        return expectation;
-    } else {
-        throw std::invalid_argument("Unsupported observable: " + observable);
-    }
-}
-
-void DensityMatrix::set_matrix(const std::vector<std::vector<std::complex<double>>>& matrix) {
-    if (matrix.size() != (1ULL << num_qubits_) || 
-        (matrix.size() > 0 && matrix[0].size() != matrix.size())) {
-        throw std::invalid_argument("Matrix size mismatch");
-    }
-    matrix_ = matrix;
-    is_normalized_ = false;
-    normalize();
-}
-
-DensityMatrix DensityMatrix::partial_trace(const std::vector<int>& qubits_to_trace) const {
-    // This is a simplified implementation
-    // In practice, this would be more complex
-    int remaining_qubits = num_qubits_ - qubits_to_trace.size();
-    DensityMatrix result(remaining_qubits);
-    
-    // For now, just create a simple density matrix
-    // In practice, you'd need to properly trace out the specified qubits
-    size_t new_size = 1ULL << remaining_qubits;
-    for (size_t i = 0; i < new_size; ++i) {
-        for (size_t j = 0; j < new_size; ++j) {
-            if (i == j) {
-                result(i, j) = std::complex<double>(1.0 / new_size, 0.0);
+            if (otherQubitsMatch) {
+                int gateRow = state1 * 2 + state2;
+                int gateCol = newState1 * 2 + newState2;
+                fullMatrix(i, j) = gate(gateRow, gateCol);
             } else {
-                result(i, j) = std::complex<double>(0.0, 0.0);
+                fullMatrix(i, j) = 0.0;
             }
         }
+    }
+    
+    return fullMatrix;
+}
+
+void DensityMatrix::validateQubitIndex(int qubit) const {
+    if (qubit < 0 || qubit >= numQubits_) {
+        throw std::out_of_range("Qubit index out of range");
+    }
+}
+
+DensityMatrix DensityMatrix::tensorProduct(const DensityMatrix& other) const {
+    int newNumQubits = numQubits_ + other.numQubits_;
+    MatrixXcd newDensityMatrix = Operators::tensorProduct(densityMatrix_, other.densityMatrix_);
+    
+    DensityMatrix result(newNumQubits);
+    result.densityMatrix_ = newDensityMatrix;
+    
+    return result;
+}
+
+MatrixXcd DensityMatrix::partialTrace(const std::vector<int>& qubitsToTrace) const {
+    // Sort qubits to trace in descending order to avoid index shifting
+    std::vector<int> sortedQubits = qubitsToTrace;
+    std::sort(sortedQubits.begin(), sortedQubits.end(), std::greater<int>());
+    
+    // Validate qubit indices
+    for (int qubit : sortedQubits) {
+        if (qubit < 0 || qubit >= numQubits_) {
+            throw std::out_of_range("Qubit index out of range for partial trace");
+        }
+    }
+    
+    MatrixXcd result = densityMatrix_;
+    
+    // Perform partial trace
+    for (int qubit : sortedQubits) {
+        result = Operators::partialTrace(result, qubit, numQubits_);
     }
     
     return result;
 }
 
-double DensityMatrix::get_purity() const {
-    double purity = 0.0;
-    size_t size = matrix_.size();
+double DensityMatrix::getQubitProbability(int qubit, int value) const {
+    validateQubitIndex(qubit);
     
-    for (size_t i = 0; i < size; ++i) {
-        for (size_t j = 0; j < size; ++j) {
-            purity += std::norm(matrix_[i][j]);
-        }
+    if (value != 0 && value != 1) {
+        throw std::invalid_argument("Qubit value must be 0 or 1");
     }
     
-    return purity;
+    // Create projection operator for the measurement
+    Matrix2cd projection;
+    if (value == 0) {
+        projection = (Matrix2cd() << 1.0, 0.0, 0.0, 0.0).finished();
+    } else {
+        projection = (Matrix2cd() << 0.0, 0.0, 0.0, 1.0).finished();
+    }
+    
+    MatrixXcd fullProjection = createSingleQubitGate(projection, qubit);
+    std::complex<double> probability = (fullProjection * densityMatrix_).trace();
+    
+    return probability.real();
 }
 
-double DensityMatrix::get_entropy() const {
-    // Calculate von Neumann entropy: S = -Tr(ρ log ρ)
-    // This is a simplified implementation
-    double entropy = 0.0;
-    size_t size = matrix_.size();
+bool DensityMatrix::isPure() const {
+    double purity = getPurity();
+    return std::abs(purity - 1.0) < 1e-12;
+}
+
+bool DensityMatrix::isMixed() const {
+    return !isPure();
+}
+
+bool DensityMatrix::isValid() const {
+    // Check if trace is 1
+    double trace = getTrace();
+    if (std::abs(trace - 1.0) > 1e-12) {
+        return false;
+    }
     
-    // For simplicity, we'll use the diagonal elements as eigenvalues
-    for (size_t i = 0; i < size; ++i) {
-        double eigenvalue = std::real(matrix_[i][i]);
-        if (eigenvalue > 1e-10) {
-            entropy -= eigenvalue * std::log2(eigenvalue);
+    // Check if Hermitian
+    MatrixXcd difference = densityMatrix_ - densityMatrix_.adjoint();
+    if (difference.norm() > 1e-12) {
+        return false;
+    }
+    
+    // Check if positive semidefinite (all eigenvalues >= 0)
+    Eigen::SelfAdjointEigenSolver<MatrixXcd> solver(densityMatrix_);
+    const VectorXcd& eigenvalues = solver.eigenvalues();
+    
+    for (int i = 0; i < eigenvalues.size(); ++i) {
+        if (eigenvalues(i).real() < -1e-12) {
+            return false;
         }
     }
     
-    return entropy;
+    return true;
 }
 
 } // namespace omniq

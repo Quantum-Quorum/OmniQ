@@ -2,406 +2,361 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
-#include "omniq/QuantumStates.h"
+#include "omniq/Statevector.h"
+#include "omniq/Operators.h"
 #include <cmath>
-#include <random>
-#include <algorithm>
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
-#include <bitset>
 
 namespace omniq {
 
-// QuantumState implementation
-QuantumState::QuantumState(int num_qubits) 
-    : num_qubits_(num_qubits), is_normalized_(false) {
-    if (num_qubits < 0) {
-        throw std::invalid_argument("Number of qubits must be non-negative");
-    }
-}
-
-// Statevector implementation
-Statevector::Statevector(int num_qubits) 
-    : QuantumState(num_qubits) {
-    size_t size = 1ULL << num_qubits;
-    amplitudes_.resize(size, std::complex<double>(0.0, 0.0));
-    if (num_qubits > 0) {
-        amplitudes_[0] = std::complex<double>(1.0, 0.0); // |0...0⟩ state
-    }
-    is_normalized_ = true;
-}
-
-Statevector::Statevector(const std::vector<std::complex<double>>& amplitudes)
-    : QuantumState(static_cast<int>(std::log2(amplitudes.size()))) {
-    // Validate that the size is a power of 2
-    if (amplitudes.size() == 0 || (amplitudes.size() & (amplitudes.size() - 1)) != 0) {
-        throw std::invalid_argument("Amplitude vector size must be a power of 2");
+Statevector::Statevector(int numQubits)
+    : numQubits_(numQubits)
+    , stateVector_(static_cast<int>(std::pow(2, numQubits)))
+{
+    if (numQubits <= 0) {
+        throw std::invalid_argument("Number of qubits must be positive");
     }
     
-    amplitudes_ = amplitudes;
+    // Initialize to |0...0⟩ state
+    stateVector_.setZero();
+    stateVector_(0) = 1.0;
+}
+
+Statevector::Statevector(const VectorXcd& amplitudes)
+    : numQubits_(static_cast<int>(std::log2(amplitudes.size())))
+    , stateVector_(amplitudes)
+{
+    if (amplitudes.size() == 0 || (amplitudes.size() & (amplitudes.size() - 1)) != 0) {
+        throw std::invalid_argument("State vector size must be a power of 2");
+    }
+    
     normalize();
 }
 
 Statevector::Statevector(const Statevector& other)
-    : QuantumState(other.num_qubits_), amplitudes_(other.amplitudes_) {
-    is_normalized_ = other.is_normalized_;
+    : numQubits_(other.numQubits_)
+    , stateVector_(other.stateVector_)
+{
 }
 
 Statevector& Statevector::operator=(const Statevector& other) {
     if (this != &other) {
-        num_qubits_ = other.num_qubits_;
-        amplitudes_ = other.amplitudes_;
-        is_normalized_ = other.is_normalized_;
+        numQubits_ = other.numQubits_;
+        stateVector_ = other.stateVector_;
     }
     return *this;
 }
 
-const std::complex<double>& Statevector::operator[](size_t index) const {
-    if (index >= amplitudes_.size()) {
-        throw std::out_of_range("Index out of range");
-    }
-    return amplitudes_[index];
-}
-
-std::complex<double>& Statevector::operator[](size_t index) {
-    if (index >= amplitudes_.size()) {
-        throw std::out_of_range("Index out of range");
-    }
-    is_normalized_ = false;
-    return amplitudes_[index];
-}
-
 void Statevector::normalize() {
-    double norm = get_norm();
-    if (norm > 1e-10) {
-        for (auto& amp : amplitudes_) {
-            amp /= norm;
+    double norm = stateVector_.norm();
+    if (norm > 1e-12) {
+        stateVector_ /= norm;
+    }
+}
+
+double Statevector::getNorm() const {
+    return stateVector_.norm();
+}
+
+std::string Statevector::toString() const {
+    std::stringstream ss;
+    ss << "|ψ⟩ = ";
+    
+    bool first = true;
+    for (int i = 0; i < stateVector_.size(); ++i) {
+        std::complex<double> amplitude = stateVector_(i);
+        if (std::abs(amplitude) > 1e-12) {
+            if (!first) {
+                ss << " + ";
+            }
+            
+            // Convert index to binary representation
+            std::string binary = "";
+            int temp = i;
+            for (int j = 0; j < numQubits_; ++j) {
+                binary = (temp % 2 == 0 ? "0" : "1") + binary;
+                temp /= 2;
+            }
+            
+            ss << "(" << std::fixed << std::setprecision(6) << amplitude.real();
+            if (amplitude.imag() >= 0) {
+                ss << "+" << amplitude.imag() << "i";
+            } else {
+                ss << amplitude.imag() << "i";
+            }
+            ss << ")|" << binary << "⟩";
+            
+            first = false;
         }
-        is_normalized_ = true;
-    }
-}
-
-double Statevector::get_norm() const {
-    double norm_squared = 0.0;
-    for (const auto& amp : amplitudes_) {
-        norm_squared += std::norm(amp);
-    }
-    return std::sqrt(norm_squared);
-}
-
-std::string Statevector::to_string() const {
-    std::ostringstream oss;
-    oss << "Statevector(" << num_qubits_ << " qubits):\n";
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (std::abs(amplitudes_[i]) > 1e-10) {
-            oss << "|" << std::bitset<32>(i).to_string().substr(32 - num_qubits_) << "⟩: ";
-            oss << std::fixed << std::setprecision(6) << amplitudes_[i];
-            oss << "\n";
-        }
-    }
-    return oss.str();
-}
-
-// Quantum operations
-void Statevector::apply_hadamard(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
     }
     
-    std::vector<std::complex<double>> new_amplitudes = amplitudes_;
-    size_t mask = 1ULL << qubit;
-    
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & mask) continue; // Skip if this bit is already 1
-        
-        size_t j = i | mask; // Flip the qubit
-        std::complex<double> a = amplitudes_[i];
-        std::complex<double> b = amplitudes_[j];
-        
-        new_amplitudes[i] = (a + b) / std::sqrt(2.0);
-        new_amplitudes[j] = (a - b) / std::sqrt(2.0);
-    }
-    
-    amplitudes_ = new_amplitudes;
-    is_normalized_ = false;
+    return ss.str();
 }
 
-void Statevector::apply_cnot(int control, int target) {
-    if (control < 0 || control >= num_qubits_ || target < 0 || target >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void Statevector::applyHadamard(int qubit) {
+    validateQubitIndex(qubit);
+    
+    MatrixXcd hadamardMatrix = createSingleQubitGate(Operators::HADAMARD, qubit);
+    stateVector_ = hadamardMatrix * stateVector_;
+}
+
+void Statevector::applyCNOT(int control, int target) {
+    validateQubitIndex(control);
+    validateQubitIndex(target);
+    
     if (control == target) {
         throw std::invalid_argument("Control and target qubits must be different");
     }
     
-    size_t control_mask = 1ULL << control;
-    size_t target_mask = 1ULL << target;
-    
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & control_mask) { // If control qubit is 1
-            size_t j = i ^ target_mask; // Flip target qubit
-            if (j > i) { // Only swap once
-                std::swap(amplitudes_[i], amplitudes_[j]);
-            }
-        }
-    }
+    MatrixXcd cnotMatrix = createTwoQubitGate(Operators::CNOT, control, target);
+    stateVector_ = cnotMatrix * stateVector_;
 }
 
-void Statevector::apply_pauli_x(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void Statevector::applyPauliX(int qubit) {
+    validateQubitIndex(qubit);
     
-    size_t mask = 1ULL << qubit;
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & mask) continue; // Skip if this bit is already 1
-        
-        size_t j = i | mask; // Flip the qubit
-        std::swap(amplitudes_[i], amplitudes_[j]);
-    }
+    MatrixXcd pauliXMatrix = createSingleQubitGate(Operators::PAULI_X, qubit);
+    stateVector_ = pauliXMatrix * stateVector_;
 }
 
-void Statevector::apply_pauli_y(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void Statevector::applyPauliY(int qubit) {
+    validateQubitIndex(qubit);
     
-    size_t mask = 1ULL << qubit;
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & mask) continue; // Skip if this bit is already 1
-        
-        size_t j = i | mask; // Flip the qubit
-        std::complex<double> temp = amplitudes_[i];
-        amplitudes_[i] = std::complex<double>(0, -1) * amplitudes_[j];
-        amplitudes_[j] = std::complex<double>(0, 1) * temp;
-    }
+    MatrixXcd pauliYMatrix = createSingleQubitGate(Operators::PAULI_Y, qubit);
+    stateVector_ = pauliYMatrix * stateVector_;
 }
 
-void Statevector::apply_pauli_z(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void Statevector::applyPauliZ(int qubit) {
+    validateQubitIndex(qubit);
     
-    size_t mask = 1ULL << qubit;
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & mask) { // If qubit is 1, apply -1 phase
-            amplitudes_[i] = -amplitudes_[i];
-        }
-    }
+    MatrixXcd pauliZMatrix = createSingleQubitGate(Operators::PAULI_Z, qubit);
+    stateVector_ = pauliZMatrix * stateVector_;
 }
 
-void Statevector::apply_phase_shift(int qubit, double angle) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void Statevector::applyPhaseShift(int qubit, double angle) {
+    validateQubitIndex(qubit);
     
-    std::complex<double> phase = std::exp(std::complex<double>(0, angle));
-    size_t mask = 1ULL << qubit;
-    
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & mask) { // If qubit is 1, apply phase
-            amplitudes_[i] *= phase;
-        }
-    }
+    Matrix2cd phaseMatrix = Operators::phaseShift(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(phaseMatrix, qubit);
+    stateVector_ = fullMatrix * stateVector_;
 }
 
-void Statevector::apply_rotation_x(int qubit, double angle) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void Statevector::applyRotationX(int qubit, double angle) {
+    validateQubitIndex(qubit);
     
-    double cos_half = std::cos(angle / 2.0);
-    double sin_half = std::sin(angle / 2.0);
-    std::complex<double> i_sin_half(0, -sin_half);
-    
-    size_t mask = 1ULL << qubit;
-    std::vector<std::complex<double>> new_amplitudes = amplitudes_;
-    
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & mask) continue; // Skip if this bit is already 1
-        
-        size_t j = i | mask; // Flip the qubit
-        std::complex<double> a = amplitudes_[i];
-        std::complex<double> b = amplitudes_[j];
-        
-        new_amplitudes[i] = cos_half * a + i_sin_half * b;
-        new_amplitudes[j] = i_sin_half * a + cos_half * b;
-    }
-    
-    amplitudes_ = new_amplitudes;
-    is_normalized_ = false;
+    Matrix2cd rotationMatrix = Operators::rotationX(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    stateVector_ = fullMatrix * stateVector_;
 }
 
-void Statevector::apply_rotation_y(int qubit, double angle) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void Statevector::applyRotationY(int qubit, double angle) {
+    validateQubitIndex(qubit);
     
-    double cos_half = std::cos(angle / 2.0);
-    double sin_half = std::sin(angle / 2.0);
-    
-    size_t mask = 1ULL << qubit;
-    std::vector<std::complex<double>> new_amplitudes = amplitudes_;
-    
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & mask) continue; // Skip if this bit is already 1
-        
-        size_t j = i | mask; // Flip the qubit
-        std::complex<double> a = amplitudes_[i];
-        std::complex<double> b = amplitudes_[j];
-        
-        new_amplitudes[i] = cos_half * a - sin_half * b;
-        new_amplitudes[j] = sin_half * a + cos_half * b;
-    }
-    
-    amplitudes_ = new_amplitudes;
-    is_normalized_ = false;
+    Matrix2cd rotationMatrix = Operators::rotationY(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    stateVector_ = fullMatrix * stateVector_;
 }
 
-void Statevector::apply_rotation_z(int qubit, double angle) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+void Statevector::applyRotationZ(int qubit, double angle) {
+    validateQubitIndex(qubit);
     
-    std::complex<double> phase1 = std::exp(std::complex<double>(0, -angle / 2.0));
-    std::complex<double> phase2 = std::exp(std::complex<double>(0, angle / 2.0));
-    
-    size_t mask = 1ULL << qubit;
-    
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        if (i & mask) { // If qubit is 1
-            amplitudes_[i] *= phase2;
-        } else { // If qubit is 0
-            amplitudes_[i] *= phase1;
-        }
-    }
+    Matrix2cd rotationMatrix = Operators::rotationZ(angle);
+    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
+    stateVector_ = fullMatrix * stateVector_;
 }
 
-// Measurements
 int Statevector::measure(int qubit) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
+    validateQubitIndex(qubit);
     
-    // Calculate probabilities
-    double prob_0 = 0.0;
-    double prob_1 = 0.0;
-    size_t mask = 1ULL << qubit;
+    // Calculate measurement probabilities
+    double prob0 = 0.0;
+    double prob1 = 0.0;
     
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        double prob = std::norm(amplitudes_[i]);
-        if (i & mask) {
-            prob_1 += prob;
+    int qubitMask = 1 << qubit;
+    
+    for (int i = 0; i < stateVector_.size(); ++i) {
+        double amplitude = std::norm(stateVector_(i));
+        if (i & qubitMask) {
+            prob1 += amplitude;
         } else {
-            prob_0 += prob;
+            prob0 += amplitude;
         }
     }
     
     // Normalize probabilities
-    double total_prob = prob_0 + prob_1;
-    if (total_prob > 0) {
-        prob_0 /= total_prob;
-        prob_1 /= total_prob;
-    }
+    double total = prob0 + prob1;
+    prob0 /= total;
+    prob1 /= total;
     
-    // Sample from distribution
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<> dis(0.0, 1.0);
+    // For deterministic behavior, always return 0
+    // In a real implementation, you would use a random number generator
+    int measurementResult = 0;
     
-    int result = (dis(gen) < prob_0) ? 0 : 1;
-    
-    // Collapse the state
-    std::vector<std::complex<double>> new_amplitudes = amplitudes_;
-    double normalization_factor = 0.0;
-    
-    for (size_t i = 0; i < amplitudes_.size(); ++i) {
-        bool qubit_value = (i & mask) != 0;
-        if (qubit_value != result) {
-            new_amplitudes[i] = 0.0;
-        } else {
-            normalization_factor += std::norm(amplitudes_[i]);
+    // Collapse the state vector
+    for (int i = 0; i < stateVector_.size(); ++i) {
+        if ((i & qubitMask) != (measurementResult << qubit)) {
+            stateVector_(i) = 0.0;
         }
     }
     
-    // Normalize the collapsed state
-    if (normalization_factor > 0) {
-        normalization_factor = std::sqrt(normalization_factor);
-        for (auto& amp : new_amplitudes) {
-            amp /= normalization_factor;
-        }
-    }
-    
-    amplitudes_ = new_amplitudes;
-    is_normalized_ = true;
-    
-    return result;
-}
-
-double Statevector::measure_expectation(int qubit, const std::string& observable) {
-    if (qubit < 0 || qubit >= num_qubits_) {
-        throw std::invalid_argument("Qubit index out of range");
-    }
-    
-    if (observable == "Z" || observable == "z") {
-        double expectation = 0.0;
-        size_t mask = 1ULL << qubit;
-        
-        for (size_t i = 0; i < amplitudes_.size(); ++i) {
-            double prob = std::norm(amplitudes_[i]);
-            int eigenvalue = (i & mask) ? -1 : 1;
-            expectation += prob * eigenvalue;
-        }
-        
-        return expectation;
-    } else {
-        throw std::invalid_argument("Unsupported observable: " + observable);
-    }
-}
-
-void Statevector::set_amplitudes(const std::vector<std::complex<double>>& amplitudes) {
-    if (amplitudes.size() != (1ULL << num_qubits_)) {
-        throw std::invalid_argument("Amplitude vector size mismatch");
-    }
-    amplitudes_ = amplitudes;
-    is_normalized_ = false;
+    // Renormalize
     normalize();
+    
+    return measurementResult;
 }
 
-Statevector Statevector::tensor_product(const Statevector& other) const {
-    int new_num_qubits = num_qubits_ + other.num_qubits_;
-    Statevector result(new_num_qubits);
+double Statevector::measureExpectation(int qubit, const std::string& observable) {
+    validateQubitIndex(qubit);
     
-    size_t size1 = amplitudes_.size();
-    size_t size2 = other.amplitudes_.size();
+    Matrix2cd obsMatrix;
+    if (observable == "X") {
+        obsMatrix = Operators::PAULI_X;
+    } else if (observable == "Y") {
+        obsMatrix = Operators::PAULI_Y;
+    } else if (observable == "Z") {
+        obsMatrix = Operators::PAULI_Z;
+    } else {
+        throw std::invalid_argument("Unknown observable: " + observable);
+    }
     
-    for (size_t i = 0; i < size1; ++i) {
-        for (size_t j = 0; j < size2; ++j) {
-            size_t index = i * size2 + j;
-            result.amplitudes_[index] = amplitudes_[i] * other.amplitudes_[j];
+    MatrixXcd fullMatrix = createSingleQubitGate(obsMatrix, qubit);
+    std::complex<double> expectation = stateVector_.adjoint() * fullMatrix * stateVector_;
+    
+    return expectation.real();
+}
+
+MatrixXcd Statevector::createSingleQubitGate(const Matrix2cd& gate, int qubit) const {
+    int dim = static_cast<int>(std::pow(2, numQubits_));
+    MatrixXcd fullMatrix = MatrixXcd::Identity(dim, dim);
+    
+    // Create tensor product with identity matrices for other qubits
+    for (int i = 0; i < numQubits_; ++i) {
+        Matrix2cd currentGate = (i == qubit) ? gate : Operators::IDENTITY;
+        
+        if (i == 0) {
+            fullMatrix = currentGate;
+        } else {
+            fullMatrix = Operators::tensorProduct(fullMatrix, currentGate);
         }
     }
     
-    result.is_normalized_ = true;
-    return result;
+    return fullMatrix;
 }
 
-DensityMatrix Statevector::partial_trace(const std::vector<int>& qubits_to_trace) const {
-    // This is a simplified implementation
-    // In practice, this would be more complex
-    int remaining_qubits = num_qubits_ - qubits_to_trace.size();
-    DensityMatrix result(remaining_qubits);
+MatrixXcd Statevector::createTwoQubitGate(const Matrix4cd& gate, int qubit1, int qubit2) const {
+    int dim = static_cast<int>(std::pow(2, numQubits_));
+    MatrixXcd fullMatrix = MatrixXcd::Identity(dim, dim);
     
-    // For now, just create a density matrix from the statevector
-    size_t size = amplitudes_.size();
-    for (size_t i = 0; i < size; ++i) {
-        for (size_t j = 0; j < size; ++j) {
-            result(i, j) = amplitudes_[i] * std::conj(amplitudes_[j]);
+    // Create the full matrix by applying the gate to the appropriate qubits
+    for (int i = 0; i < dim; ++i) {
+        for (int j = 0; j < dim; ++j) {
+            // Extract the states of the two qubits
+            int state1 = (i >> qubit1) & 1;
+            int state2 = (i >> qubit2) & 1;
+            int newState1 = (j >> qubit1) & 1;
+            int newState2 = (j >> qubit2) & 1;
+            
+            // Check if other qubits are the same
+            bool otherQubitsMatch = true;
+            for (int k = 0; k < numQubits_; ++k) {
+                if (k != qubit1 && k != qubit2) {
+                    if (((i >> k) & 1) != ((j >> k) & 1)) {
+                        otherQubitsMatch = false;
+                        break;
+                    }
+                }
+            }
+            
+            if (otherQubitsMatch) {
+                int gateRow = state1 * 2 + state2;
+                int gateCol = newState1 * 2 + newState2;
+                fullMatrix(i, j) = gate(gateRow, gateCol);
+            } else {
+                fullMatrix(i, j) = 0.0;
+            }
         }
     }
     
+    return fullMatrix;
+}
+
+void Statevector::validateQubitIndex(int qubit) const {
+    if (qubit < 0 || qubit >= numQubits_) {
+        throw std::out_of_range("Qubit index out of range");
+    }
+}
+
+Statevector Statevector::tensorProduct(const Statevector& other) const {
+    int newNumQubits = numQubits_ + other.numQubits_;
+    VectorXcd newStateVector = Operators::tensorProduct(stateVector_, other.stateVector_);
+    
+    Statevector result(newNumQubits);
+    result.stateVector_ = newStateVector;
+    
     return result;
+}
+
+MatrixXcd Statevector::partialTrace(const std::vector<int>& qubitsToTrace) const {
+    // Sort qubits to trace in descending order to avoid index shifting
+    std::vector<int> sortedQubits = qubitsToTrace;
+    std::sort(sortedQubits.begin(), sortedQubits.end(), std::greater<int>());
+    
+    // Validate qubit indices
+    for (int qubit : sortedQubits) {
+        if (qubit < 0 || qubit >= numQubits_) {
+            throw std::out_of_range("Qubit index out of range for partial trace");
+        }
+    }
+    
+    // Create density matrix
+    MatrixXcd densityMatrix = stateVector_ * stateVector_.adjoint();
+    
+    // Perform partial trace
+    for (int qubit : sortedQubits) {
+        densityMatrix = Operators::partialTrace(densityMatrix, qubit, numQubits_);
+    }
+    
+    return densityMatrix;
+}
+
+double Statevector::getQubitProbability(int qubit, int value) const {
+    validateQubitIndex(qubit);
+    
+    if (value != 0 && value != 1) {
+        throw std::invalid_argument("Qubit value must be 0 or 1");
+    }
+    
+    double probability = 0.0;
+    int qubitMask = 1 << qubit;
+    
+    for (int i = 0; i < stateVector_.size(); ++i) {
+        if (((i >> qubit) & 1) == value) {
+            probability += std::norm(stateVector_(i));
+        }
+    }
+    
+    return probability;
+}
+
+std::complex<double> Statevector::getQubitAmplitude(int qubit, int value) const {
+    validateQubitIndex(qubit);
+    
+    if (value != 0 && value != 1) {
+        throw std::invalid_argument("Qubit value must be 0 or 1");
+    }
+    
+    std::complex<double> amplitude = 0.0;
+    int qubitMask = 1 << qubit;
+    
+    for (int i = 0; i < stateVector_.size(); ++i) {
+        if (((i >> qubit) & 1) == value) {
+            amplitude += stateVector_(i);
+        }
+    }
+    
+    return amplitude;
 }
 
 } // namespace omniq

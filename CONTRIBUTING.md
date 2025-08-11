@@ -239,7 +239,7 @@ If you need help with contributing:
 1. Check the [documentation](https://omniq.readthedocs.io/)
 2. Search existing [issues](https://github.com/Quantum-Quorum/OmniQ/issues)
 3. Start a [discussion](https://github.com/Quantum-Quorum/OmniQ/discussions)
-4. Contact the maintainers at goutham.arcot@quantum-quorum.com
+4. Contact the maintainers at gouthamarcot@gmail.com
 
 ## License
 

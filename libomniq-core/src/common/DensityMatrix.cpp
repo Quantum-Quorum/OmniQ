@@ -24,6 +24,17 @@ DensityMatrix::DensityMatrix(int num_qubits)
 
 DensityMatrix::DensityMatrix(const std::vector<std::vector<std::complex<double>>>& matrix)
     : QuantumState(static_cast<int>(std::log2(matrix.size()))) {
+    // Validate matrix dimensions
+    if (matrix.size() == 0 || (matrix.size() & (matrix.size() - 1)) != 0) {
+        throw std::invalid_argument("Matrix size must be a power of 2");
+    }
+    
+    for (const auto& row : matrix) {
+        if (row.size() != matrix.size()) {
+            throw std::invalid_argument("Matrix must be square");
+        }
+    }
+    
     matrix_ = matrix;
     normalize();
 }

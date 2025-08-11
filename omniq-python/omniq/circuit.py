@@ -88,11 +88,24 @@ class Circuit:
             
         Returns:
             Final quantum state
+            
+        Raises:
+            ValueError: If circuit is empty or invalid
+            RuntimeError: If execution fails
         """
-        if initial_state is None:
-            return Statevector(self._circuit.execute_statevector())
-        else:
-            return Statevector(self._circuit.execute_statevector(initial_state._statevector))
+        if not self._circuit.get_gate_count():
+            raise ValueError("Cannot execute empty circuit")
+        
+        try:
+            if initial_state is None:
+                return Statevector(self._circuit.execute_statevector())
+            else:
+                if initial_state.num_qubits != self.num_qubits:
+                    raise ValueError(f"Initial state has {initial_state.num_qubits} qubits, "
+                                   f"but circuit expects {self.num_qubits} qubits")
+                return Statevector(self._circuit.execute_statevector(initial_state._statevector))
+        except Exception as e:
+            raise RuntimeError(f"Circuit execution failed: {str(e)}") from e
     
     def execute_density_matrix(self, initial_state: Optional['DensityMatrix'] = None) -> 'DensityMatrix':
         """

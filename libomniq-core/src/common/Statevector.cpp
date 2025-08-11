@@ -34,6 +34,11 @@ Statevector::Statevector(int num_qubits)
 
 Statevector::Statevector(const std::vector<std::complex<double>>& amplitudes)
     : QuantumState(static_cast<int>(std::log2(amplitudes.size()))) {
+    // Validate that the size is a power of 2
+    if (amplitudes.size() == 0 || (amplitudes.size() & (amplitudes.size() - 1)) != 0) {
+        throw std::invalid_argument("Amplitude vector size must be a power of 2");
+    }
+    
     amplitudes_ = amplitudes;
     normalize();
 }

@@ -115,6 +115,7 @@ public:
 private:
     void apply_qft_to_statevector(Statevector& state) const;
     void apply_inverse_qft_to_statevector(Statevector& state) const;
+    void fft_inplace(std::vector<std::complex<double>>& data) const;
 };
 
 /**

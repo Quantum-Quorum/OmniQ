@@ -127,19 +127,54 @@ void QFTGate::apply_qft_to_statevector(Statevector& state) const {
         throw std::invalid_argument("State qubit count mismatch");
     }
     
-    std::vector<std::complex<double>> new_amplitudes(state.size());
+    // Use in-place FFT for better performance
+    std::vector<std::complex<double>> amplitudes = state.get_amplitudes();
+    const size_t size = amplitudes.size();
+    const double norm_factor = 1.0 / std::sqrt(static_cast<double>(size));
     
-    for (size_t j = 0; j < state.size(); ++j) {
-        std::complex<double> sum(0.0, 0.0);
-        for (size_t k = 0; k < state.size(); ++k) {
-            double phase = 2.0 * M_PI * j * k / state.size();
-            std::complex<double> factor = std::exp(std::complex<double>(0, phase));
-            sum += state[k] * factor;
-        }
-        new_amplitudes[j] = sum / std::sqrt(static_cast<double>(state.size()));
+    // Apply FFT using Cooley-Tukey algorithm
+    fft_inplace(amplitudes);
+    
+    // Normalize
+    for (auto& amp : amplitudes) {
+        amp *= norm_factor;
     }
     
-    state.set_amplitudes(new_amplitudes);
+    state.set_amplitudes(amplitudes);
+}
+
+// Helper function for in-place FFT
+void QFTGate::fft_inplace(std::vector<std::complex<double>>& data) const {
+    const size_t n = data.size();
+    if (n <= 1) return;
+    
+    // Bit-reversal permutation
+    for (size_t i = 1, j = 0; i < n; i++) {
+        size_t bit = n >> 1;
+        for (; j & bit; bit >>= 1) {
+            j ^= bit;
+        }
+        j ^= bit;
+        if (i < j) {
+            std::swap(data[i], data[j]);
+        }
+    }
+    
+    // FFT computation
+    for (size_t len = 2; len <= n; len <<= 1) {
+        double ang = 2 * M_PI / len;
+        std::complex<double> wlen(cos(ang), sin(ang));
+        for (size_t i = 0; i < n; i += len) {
+            std::complex<double> w(1);
+            for (size_t j = 0; j < len / 2; j++) {
+                std::complex<double> u = data[i + j];
+                std::complex<double> v = data[i + j + len / 2] * w;
+                data[i + j] = u + v;
+                data[i + j + len / 2] = u - v;
+                w *= wlen;
+            }
+        }
+    }
 }
 
 void QFTGate::apply_inverse_qft_to_statevector(Statevector& state) const {

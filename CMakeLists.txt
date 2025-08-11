@@ -48,11 +48,20 @@ target_compile_options(omniq-core PRIVATE
 target_link_libraries(omniq-core PUBLIC Threads::Threads)
 
 # Create the test executables
-add_executable(test_core test_core.cpp)
-target_link_libraries(test_core PRIVATE omniq-core)
+# Find Google Test
+find_package(GTest REQUIRED)
+
+# Test executables
+add_executable(test_core tests/test_core.cpp)
+target_link_libraries(test_core PRIVATE omniq-core GTest::gtest GTest::gtest_main GTest::gmock)
 
 add_executable(test_algorithms test_algorithms.cpp)
-target_link_libraries(test_algorithms PRIVATE omniq-core)
+target_link_libraries(test_algorithms PRIVATE omniq-core GTest::gtest GTest::gtest_main)
+
+# Enable testing
+enable_testing()
+add_test(NAME CoreTest COMMAND test_core)
+add_test(NAME AlgorithmsTest COMMAND test_algorithms)
 
 # Create the main executable
 add_executable(omniq main)

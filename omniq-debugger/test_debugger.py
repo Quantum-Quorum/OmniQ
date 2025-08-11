@@ -99,13 +99,3 @@ if __name__ == "__main__":
     simulate_quantum_state()
     test_quantum_properties()
     test_bloch_sphere()
-    
-    print("\n=== Debugger Test Complete ===")
-    print("The OmniQ Debugger should now be running with a GUI interface.")
-    print("You can interact with the debugger to:")
-    print("- View quantum circuit visualization")
-    print("- Step through circuit execution")
-    print("- Analyze quantum states and properties")
-    print("- Visualize qubits on Bloch spheres")
-    print("- Perform state tomography")
-    print("- Measure entanglement properties") 

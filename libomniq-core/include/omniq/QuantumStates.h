@@ -2,8 +2,8 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
-#ifndef QUANTUMSTATES_H
-#define QUANTUMSTATES_H
+#ifndef OMNIQ_QUANTUMSTATES_H
+#define OMNIQ_QUANTUMSTATES_H
 
 #include <vector>
 #include <complex>
@@ -138,4 +138,4 @@ public:
 
 } // namespace omniq
 
-#endif // QUANTUMSTATES_H
+#endif // OMNIQ_QUANTUMSTATES_H 

@@ -2,8 +2,8 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
-#ifndef CIRCUIT_H
-#define CIRCUIT_H
+#ifndef OMNIQ_CIRCUIT_H
+#define OMNIQ_CIRCUIT_H
 
 #include <vector>
 #include <string>
@@ -226,4 +226,4 @@ public:
 
 } // namespace omniq
 
-#endif // CIRCUIT_H
+#endif // OMNIQ_CIRCUIT_H 

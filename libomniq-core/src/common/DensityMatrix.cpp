@@ -2,7 +2,7 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
-#include "DensityMatrix.h"
+#include "omniq/QuantumStates.h"
 #include <cmath>
 #include <algorithm>
 #include <stdexcept>

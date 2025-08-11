@@ -2,7 +2,7 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
-#include "Circuit.h"
+#include "omniq/Circuit.h"
 #include <algorithm>
 #include <stdexcept>
 #include <sstream>

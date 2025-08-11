@@ -2,7 +2,7 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
-#include "QPE.h"
+#include "omniq/QPE.h"
 #include <cmath>
 #include <algorithm>
 #include <stdexcept>

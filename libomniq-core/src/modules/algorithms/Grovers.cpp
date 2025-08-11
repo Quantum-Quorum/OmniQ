@@ -2,7 +2,7 @@
 // Created by Goutham Arcot on 17/07/25.
 //
 
-#include "Grovers.h"
+#include "omniq/Grovers.h"
 #include <cmath>
 #include <random>
 #include <algorithm>

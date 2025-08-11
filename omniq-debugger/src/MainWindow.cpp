@@ -16,10 +16,39 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
+    , mainSplitter(nullptr)
+    , circuitView(nullptr)
+    , stateViewer(nullptr)
+    , qubitViewer(nullptr)
+    , circuitDock(nullptr)
+    , stateDock(nullptr)
+    , qubitDock(nullptr)
+    , outputDock(nullptr)
+    , debugToolBar(nullptr)
+    , stepForwardBtn(nullptr)
+    , stepBackwardBtn(nullptr)
+    , runBtn(nullptr)
+    , pauseBtn(nullptr)
+    , resetBtn(nullptr)
+    , stepSpinBox(nullptr)
+    , speedComboBox(nullptr)
+    , progressBar(nullptr)
+    , coreInterface(new CoreInterface(this))
+    , newAction(nullptr)
+    , openAction(nullptr)
+    , saveAction(nullptr)
+    , saveAsAction(nullptr)
+    , exitAction(nullptr)
+    , stepForwardAction(nullptr)
+    , stepBackwardAction(nullptr)
+    , runAction(nullptr)
+    , pauseAction(nullptr)
+    , resetAction(nullptr)
+    , aboutAction(nullptr)
     , isRunning(false)
     , currentStep(0)
     , totalSteps(0)
-    , coreInterface(new CoreInterface(this))
+    , updateTimer(nullptr)
 {
     setupUI();
     setupMenus();
@@ -234,7 +263,9 @@ void MainWindow::stepForward()
 {
     if (currentStep < totalSteps) {
         currentStep++;
-        stepSpinBox->setValue(currentStep);
+        if (stepSpinBox) {
+            stepSpinBox->setValue(currentStep);
+        }
         // TODO: Update circuit state
         statusBar()->showMessage(QString("Step %1 of %2").arg(currentStep).arg(totalSteps));
     }
@@ -244,7 +275,9 @@ void MainWindow::stepBackward()
 {
     if (currentStep > 0) {
         currentStep--;
-        stepSpinBox->setValue(currentStep);
+        if (stepSpinBox) {
+            stepSpinBox->setValue(currentStep);
+        }
         // TODO: Update circuit state
         statusBar()->showMessage(QString("Step %1 of %2").arg(currentStep).arg(totalSteps));
     }
@@ -253,8 +286,8 @@ void MainWindow::stepBackward()
 void MainWindow::runCircuit()
 {
     isRunning = true;
-    runAction->setEnabled(false);
-    pauseAction->setEnabled(true);
+    if (runAction) runAction->setEnabled(false);
+    if (pauseAction) pauseAction->setEnabled(true);
     statusBar()->showMessage("Running circuit...");
     // TODO: Implement circuit execution
 }
@@ -262,18 +295,18 @@ void MainWindow::runCircuit()
 void MainWindow::pauseCircuit()
 {
     isRunning = false;
-    runAction->setEnabled(true);
-    pauseAction->setEnabled(false);
+    if (runAction) runAction->setEnabled(true);
+    if (pauseAction) pauseAction->setEnabled(false);
     statusBar()->showMessage("Circuit paused");
 }
 
 void MainWindow::resetCircuit()
 {
     currentStep = 0;
-    stepSpinBox->setValue(0);
+    if (stepSpinBox) stepSpinBox->setValue(0);
     isRunning = false;
-    runAction->setEnabled(true);
-    pauseAction->setEnabled(false);
+    if (runAction) runAction->setEnabled(true);
+    if (pauseAction) pauseAction->setEnabled(false);
     statusBar()->showMessage("Circuit reset");
     // TODO: Reset circuit state
 }
@@ -289,7 +322,7 @@ void MainWindow::about()
 
 void MainWindow::updateStatus()
 {
-    if (totalSteps > 0) {
+    if (totalSteps > 0 && progressBar) {
         int progress = (currentStep * 100) / totalSteps;
         progressBar->setValue(progress);
     }

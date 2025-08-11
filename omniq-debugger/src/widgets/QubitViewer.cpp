@@ -19,6 +19,7 @@
 #include <QApplication>
 #include <QStyle>
 #include <cmath>
+#include <complex>
 
 // Bloch Sphere Widget Implementation
 BlochSphereWidget::BlochSphereWidget(QWidget *parent)
@@ -153,7 +154,7 @@ void BlochSphereWidget::mouseMoveEvent(QMouseEvent *event)
         
         // Update amplitudes
         alpha_ = cos(theta_ / 2);
-        beta_ = sin(theta_ / 2) * std::polar(1.0, phi_);
+        beta_ = sin(theta_ / 2) * std::complex<double>(cos(phi_), sin(phi_)).real();
         
         lastMousePos_ = event->pos();
         update();
@@ -356,8 +357,8 @@ void QubitViewer::onMeasureButtonClicked()
     if (qubitStates_.contains(qubit)) {
         double prob0 = qubitStates_[qubit][0];
         for (int i = 0; i < count; ++i) {
-            double rand = static_cast<double>(rand()) / RAND_MAX;
-            results.append(rand < prob0 ? 0 : 1);
+            double rand_val = static_cast<double>(std::rand()) / RAND_MAX;
+            results.append(rand_val < prob0 ? 0 : 1);
         }
     }
     

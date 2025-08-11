@@ -15,8 +15,43 @@
 #include <QJsonDocument>
 #include <memory>
 #include <complex>
-#include "../libomniq-core/include/omniq/Circuit.h"
-#include "../libomniq-core/include/omniq/QuantumStates.h"
+
+// Forward declarations for simplified version
+namespace omniq {
+    enum class GateType {
+        H, X, Y, Z, CNOT, SWAP, PHASE, RX, RY, RZ
+    };
+}
+
+// Helper class for complex numbers in Qt
+class QComplex
+{
+public:
+    QComplex(double real = 0.0, double imag = 0.0) : real_(real), imag_(imag) {}
+    
+    double real() const { return real_; }
+    double imag() const { return imag_; }
+    double magnitude() const { return std::sqrt(real_ * real_ + imag_ * imag_); }
+    double phase() const { return std::atan2(imag_, real_); }
+    
+    QString toString() const {
+        return QString("(%1 + %2i)").arg(real_).arg(imag_);
+    }
+    
+    // Conversion to std::complex
+    std::complex<double> toStdComplex() const {
+        return std::complex<double>(real_, imag_);
+    }
+    
+    // Conversion from std::complex
+    static QComplex fromStdComplex(const std::complex<double> &z) {
+        return QComplex(z.real(), z.imag());
+    }
+    
+private:
+    double real_;
+    double imag_;
+};
 
 class CoreInterface : public QObject
 {
@@ -98,13 +133,6 @@ signals:
     void errorOccurred(const QString &error);
 
 private:
-    std::unique_ptr<omniq::Circuit> circuit_;
-    std::unique_ptr<omniq::Statevector> currentState_;
-    std::unique_ptr<omniq::DensityMatrix> currentDensityMatrix_;
-    
-    QVector<std::unique_ptr<omniq::Circuit>> stepCircuits_;
-    QVector<std::unique_ptr<omniq::Statevector>> stepStates_;
-    
     int currentStep_;
     int totalSteps_;
     QString lastError_;
@@ -135,36 +163,6 @@ private:
     double calculateCoherence() const;
     QMap<QString, double> calculateEntanglementMeasures() const;
     QVector<double> performTomography() const;
-};
-
-// Helper class for complex numbers in Qt
-class QComplex
-{
-public:
-    QComplex(double real = 0.0, double imag = 0.0) : real_(real), imag_(imag) {}
-    
-    double real() const { return real_; }
-    double imag() const { return imag_; }
-    double magnitude() const { return std::sqrt(real_ * real_ + imag_ * imag_); }
-    double phase() const { return std::atan2(imag_, real_); }
-    
-    QString toString() const {
-        return QString("(%1 + %2i)").arg(real_).arg(imag_);
-    }
-    
-    // Conversion to std::complex
-    std::complex<double> toStdComplex() const {
-        return std::complex<double>(real_, imag_);
-    }
-    
-    // Conversion from std::complex
-    static QComplex fromStdComplex(const std::complex<double> &z) {
-        return QComplex(z.real(), z.imag());
-    }
-    
-private:
-    double real_;
-    double imag_;
 };
 
 #endif // COREINTERFACE_H

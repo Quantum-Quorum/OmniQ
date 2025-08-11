@@ -20,6 +20,7 @@
 #include <QVector>
 #include <QMap>
 #include <QStringList>
+#include <complex>
 
 class DensityMatrixWidget : public QWidget
 {
@@ -39,6 +40,7 @@ private:
     void drawStateVector(QPainter &painter);
     void drawBasisLabels(QPainter &painter);
     QColor getMatrixColor(double value, double maxValue);
+    QString formatComplexNumber(const std::complex<double> &z);
     
     QVector<QVector<std::complex<double>>> densityMatrix_;
     QVector<std::complex<double>> stateVector_;

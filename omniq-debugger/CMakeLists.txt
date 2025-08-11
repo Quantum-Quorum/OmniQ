@@ -4,11 +4,14 @@ project(OmniQ-Debugger VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Set Qt6 paths for Homebrew installation
+set(CMAKE_PREFIX_PATH "/opt/homebrew")
+
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
 
-# Find OmniQ core library
-find_package(OmniQ REQUIRED)
+# Find OmniQ core library (we'll build it locally for now)
+# find_package(OmniQ REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/src)
@@ -31,7 +34,7 @@ add_executable(omniq-debugger ${DEBUGGER_SOURCES})
 target_link_libraries(omniq-debugger PRIVATE 
     Qt6::Core 
     Qt6::Widgets
-    OmniQ::omniq-core
+    # OmniQ::omniq-core  # Commented out for now
 )
 
 # Set compiler flags

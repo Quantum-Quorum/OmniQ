@@ -179,6 +179,23 @@ QColor DensityMatrixWidget::getMatrixColor(double value, double maxValue)
     }
 }
 
+QString DensityMatrixWidget::formatComplexNumber(const std::complex<double> &z)
+{
+    double real = z.real();
+    double imag = z.imag();
+    
+    if (std::abs(imag) < 1e-10) {
+        return QString::number(real, 'f', 3);
+    } else if (std::abs(real) < 1e-10) {
+        return QString("%1i").arg(imag, 0, 'f', 3);
+    } else {
+        return QString("%1 %2 %3i")
+               .arg(real, 0, 'f', 3)
+               .arg(imag >= 0 ? "+" : "-")
+               .arg(std::abs(imag), 0, 'f', 3);
+    }
+}
+
 void DensityMatrixWidget::mousePressEvent(QMouseEvent *event)
 {
     if (showDensityMatrix_ && !densityMatrix_.isEmpty()) {

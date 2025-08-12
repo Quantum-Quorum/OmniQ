@@ -234,7 +234,7 @@ void MainWindow::openCircuit()
 
 void MainWindow::saveCircuit()
 {
-    // TODO: Implement circuit saving
+    // TODO: have to implement circuit saving
     statusBar()->showMessage("Circuit saved");
 }
 
@@ -243,7 +243,7 @@ void MainWindow::saveCircuitAs()
     QString fileName = QFileDialog::getSaveFileName(this,
         "Save Quantum Circuit", "", "Circuit Files (*.qasm *.json);;All Files (*)");
     if (!fileName.isEmpty()) {
-        // TODO: Implement circuit saving
+        // TODO: have to implement circuit saving
         statusBar()->showMessage("Circuit saved as: " + fileName);
     }
 }
@@ -255,7 +255,7 @@ void MainWindow::stepForward()
         if (stepSpinBox) {
             stepSpinBox->setValue(currentStep);
         }
-        // TODO: Update circuit state
+        // TODO: have to update circuit state
         statusBar()->showMessage(QString("Step %1 of %2").arg(currentStep).arg(totalSteps));
     }
 }
@@ -267,7 +267,7 @@ void MainWindow::stepBackward()
         if (stepSpinBox) {
             stepSpinBox->setValue(currentStep);
         }
-        // TODO: Update circuit state
+        // TODO: have to update circuit state
         statusBar()->showMessage(QString("Step %1 of %2").arg(currentStep).arg(totalSteps));
     }
 }

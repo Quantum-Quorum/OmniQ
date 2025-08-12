@@ -58,10 +58,9 @@ MainWindow::MainWindow(QWidget *parent)
     createActions();
     loadSettings();
     
-    // Setup update timer
     updateTimer = new QTimer(this);
     connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateStatus);
-    updateTimer->start(100); // Update every 100ms
+    updateTimer->start(100);
     
     setWindowTitle("OmniQ Quantum Circuit Debugger");
     resize(1200, 800);
@@ -74,16 +73,13 @@ MainWindow::~MainWindow()
 
 void MainWindow::setupUI()
 {
-    // Create main splitter
     mainSplitter = new QSplitter(Qt::Horizontal, this);
     setCentralWidget(mainSplitter);
     
-    // Create widgets
     circuitView = new CircuitView(this);
     stateViewer = new QuantumStateViewer(this);
     qubitViewer = new QubitViewer(this);
     
-    // Add widgets to splitter
     mainSplitter->addWidget(circuitView);
     mainSplitter->addWidget(stateViewer);
     mainSplitter->setStretchFactor(0, 2);
@@ -92,7 +88,6 @@ void MainWindow::setupUI()
 
 void MainWindow::setupMenus()
 {
-    // File menu
     QMenu *fileMenu = menuBar()->addMenu("&File");
     fileMenu->addAction(newAction);
     fileMenu->addAction(openAction);
@@ -101,7 +96,6 @@ void MainWindow::setupMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(exitAction);
     
-    // Debug menu
     QMenu *debugMenu = menuBar()->addMenu("&Debug");
     debugMenu->addAction(stepForwardAction);
     debugMenu->addAction(stepBackwardAction);
@@ -110,14 +104,12 @@ void MainWindow::setupMenus()
     debugMenu->addAction(pauseAction);
     debugMenu->addAction(resetAction);
     
-    // Help menu
     QMenu *helpMenu = menuBar()->addMenu("&Help");
     helpMenu->addAction(aboutAction);
 }
 
 void MainWindow::setupToolbars()
 {
-    // Debug toolbar
     debugToolBar = addToolBar("Debug");
     debugToolBar->addAction(stepBackwardAction);
     debugToolBar->addAction(stepForwardAction);
@@ -127,21 +119,18 @@ void MainWindow::setupToolbars()
     debugToolBar->addAction(resetAction);
     debugToolBar->addSeparator();
     
-    // Step control
     debugToolBar->addWidget(new QLabel("Step:"));
     stepSpinBox = new QSpinBox(this);
     stepSpinBox->setRange(0, 1000);
     stepSpinBox->setValue(0);
     debugToolBar->addWidget(stepSpinBox);
     
-    // Speed control
     debugToolBar->addWidget(new QLabel("Speed:"));
     speedComboBox = new QComboBox(this);
     speedComboBox->addItems({"Slow", "Normal", "Fast"});
     speedComboBox->setCurrentText("Normal");
     debugToolBar->addWidget(speedComboBox);
     
-    // Progress bar
     progressBar = new QProgressBar(this);
     progressBar->setRange(0, 100);
     progressBar->setValue(0);
@@ -229,7 +218,7 @@ void MainWindow::createActions()
 
 void MainWindow::newCircuit()
 {
-    // TODO: Implement new circuit creation
+    // TODO: have to implement new circuit creation
     statusBar()->showMessage("New circuit created");
 }
 
@@ -238,7 +227,7 @@ void MainWindow::openCircuit()
     QString fileName = QFileDialog::getOpenFileName(this,
         "Open Quantum Circuit", "", "Circuit Files (*.qasm *.json);;All Files (*)");
     if (!fileName.isEmpty()) {
-        // TODO: Implement circuit loading
+        // TODO: have to implement circuit loading
         statusBar()->showMessage("Opened circuit: " + fileName);
     }
 }

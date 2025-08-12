@@ -10,7 +10,6 @@
 
 namespace omniq {
 
-// Quantum state implementation
 QuantumState::QuantumState(int numQubits) 
     : numQubits_(numQubits)
     , stateVector_(static_cast<int>(std::pow(2, numQubits)))
@@ -19,7 +18,6 @@ QuantumState::QuantumState(int numQubits)
         throw std::invalid_argument("Number of qubits must be positive");
     }
     
-    // Initialize to |0...0⟩ state
     stateVector_.setZero();
     stateVector_(0) = 1.0;
 }
@@ -89,7 +87,6 @@ MatrixXcd QuantumState::createSingleQubitGate(GateType type, int qubit, double p
     int dim = static_cast<int>(std::pow(2, numQubits_));
     MatrixXcd fullMatrix = MatrixXcd::Identity(dim, dim);
     
-    // Create the gate matrix for the specific qubit
     Matrix2cd gateMatrix;
     switch (type) {
         case GateType::H:
@@ -136,10 +133,8 @@ MatrixXcd QuantumState::createSingleQubitGate(GateType type, int qubit, double p
             throw std::invalid_argument("Unsupported gate type for single qubit");
     }
     
-    // Apply the gate to the specific qubit
     for (int i = 0; i < dim; ++i) {
         for (int j = 0; j < dim; ++j) {
-            // Check if other qubits are the same
             bool otherQubitsMatch = true;
             for (int k = 0; k < numQubits_; ++k) {
                 if (k != qubit) {
@@ -167,7 +162,6 @@ MatrixXcd QuantumState::createTwoQubitGate(GateType type, int qubit1, int qubit2
     int dim = static_cast<int>(std::pow(2, numQubits_));
     MatrixXcd fullMatrix = MatrixXcd::Identity(dim, dim);
     
-    // Create the 4x4 gate matrix
     Matrix4cd gateMatrix;
     switch (type) {
         case GateType::CNOT:
@@ -188,10 +182,8 @@ MatrixXcd QuantumState::createTwoQubitGate(GateType type, int qubit1, int qubit2
             throw std::invalid_argument("Unsupported gate type for two qubits");
     }
     
-    // Apply the gate to the specific qubits
     for (int i = 0; i < dim; ++i) {
         for (int j = 0; j < dim; ++j) {
-            // Check if other qubits are the same
             bool otherQubitsMatch = true;
             for (int k = 0; k < numQubits_; ++k) {
                 if (k != qubit1 && k != qubit2) {
@@ -313,4 +305,4 @@ std::string QuantumCircuit::getGateDescription(int step) const {
     return ss.str();
 }
 
-} // namespace omniq 
+}

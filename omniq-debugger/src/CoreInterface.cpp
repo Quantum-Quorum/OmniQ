@@ -10,7 +10,6 @@
 #include <algorithm>
 #include <random>
 
-// Include Eigen types
 using omniq::VectorXcd;
 
 CoreInterface::CoreInterface(QObject *parent)
@@ -30,11 +29,9 @@ CoreInterface::~CoreInterface()
 bool CoreInterface::createCircuit(int numQubits, int numClassicalBits)
 {
     try {
-        // Create real quantum circuit and state
         circuit_ = std::make_unique<omniq::QuantumCircuit>(numQubits);
         currentState_ = std::make_unique<omniq::QuantumState>(numQubits);
         
-        // Add some example gates to demonstrate functionality
         circuit_->addGate(omniq::GateType::H, 0);
         circuit_->addGate(omniq::GateType::CNOT, 0, 1);
         circuit_->addGate(omniq::GateType::H, 1);
@@ -43,7 +40,6 @@ bool CoreInterface::createCircuit(int numQubits, int numClassicalBits)
         currentStep_ = 0;
         isExecuting_ = false;
         
-        // Initialize qubit states
         updateQubitStates();
         
         clearError();
@@ -111,12 +107,10 @@ bool CoreInterface::executeStep(int step)
     }
     
     try {
-        // Execute steps up to the requested step
         while (currentStep_ < step && circuit_->executeStep(*currentState_)) {
             currentStep_++;
         }
         
-        // Update qubit states after execution
         updateQubitStates();
         
         emit executionStepChanged(currentStep_);

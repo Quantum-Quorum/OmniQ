@@ -70,6 +70,10 @@ circuit.debug()                 # Opens quantum debugger
 # OR
 oq.show_debugger(circuit)       # Standalone function
 
+# C/C++ equivalent
+omniq_debugger_show(circuit);   // Opens quantum debugger
+omniq_debugger_open();          // Standalone function
+
 # Execute the circuit
 result = circuit.execute()
 print(f"Final state: {result}")
@@ -101,9 +105,10 @@ print(f"Target value {target_value} found {result_counts[target_value]} times")
 
 ## Key Features
 
-* **Unified API:** Consistent interface across Python and C++ with seamless interoperability
+* **Unified API:** Consistent interface across Python, C, and C++ with seamless interoperability
 * **High Performance:** C++ core engine optimized for quantum simulations
 * **Interactive Debugger:** GUI debugger with drag-and-drop circuit building (like pandas DataFrame methods)
+* **Multi-Language Debugger:** Python, C, and C++ debugger interfaces
 * **Comprehensive Gate Set:** Support for all standard quantum gates (Hadamard, Pauli, CNOT, rotations, etc.)
 * **Quantum Algorithms:** Built-in implementations of Grover's, QPE, and other quantum algorithms
 * **Circuit Optimization:** Automatic circuit optimization and QASM export
@@ -160,6 +165,7 @@ OmniQ follows a device-agnostic approach similar to PennyLane and Qiskit:
 * **State Visualization:** Bloch sphere and density matrix visualization
 * **Step-by-Step Execution:** Interactive circuit execution and debugging
 * **Circuit Import/Export:** Save and load circuits in JSON format
+* **Multi-Language Support:** Python, C, and C++ debugger interfaces
 * **Hybrid Classical-Quantum:** Integration with classical ML frameworks
 
 ### Optimization (omniq.optimization)

@@ -65,6 +65,11 @@ circuit = oq.Circuit(2)
 circuit.add_gate('H', [0])      # Hadamard on qubit 0
 circuit.add_gate('CNOT', [0, 1]) # CNOT with control=0, target=1
 
+# Open debugger GUI (like df.head() in pandas)
+circuit.debug()                 # Opens quantum debugger
+# OR
+oq.show_debugger(circuit)       # Standalone function
+
 # Execute the circuit
 result = circuit.execute()
 print(f"Final state: {result}")
@@ -98,6 +103,7 @@ print(f"Target value {target_value} found {result_counts[target_value]} times")
 
 * **Unified API:** Consistent interface across Python and C++ with seamless interoperability
 * **High Performance:** C++ core engine optimized for quantum simulations
+* **Interactive Debugger:** GUI debugger with drag-and-drop circuit building (like pandas DataFrame methods)
 * **Comprehensive Gate Set:** Support for all standard quantum gates (Hadamard, Pauli, CNOT, rotations, etc.)
 * **Quantum Algorithms:** Built-in implementations of Grover's, QPE, and other quantum algorithms
 * **Circuit Optimization:** Automatic circuit optimization and QASM export
@@ -147,6 +153,13 @@ OmniQ follows a device-agnostic approach similar to PennyLane and Qiskit:
 * **Variational Circuits:** Parameterized quantum circuits for ML
 * **Quantum Kernels:** Quantum kernel methods for classification
 * **Quantum Neural Networks:** Quantum analogues of classical NNs
+
+### Interactive Debugger (omniq.debugger)
+* **GUI Debugger:** Qt6-based graphical debugger with real-time visualization
+* **Drag-and-Drop Builder:** Visual circuit construction with gate palette
+* **State Visualization:** Bloch sphere and density matrix visualization
+* **Step-by-Step Execution:** Interactive circuit execution and debugging
+* **Circuit Import/Export:** Save and load circuits in JSON format
 * **Hybrid Classical-Quantum:** Integration with classical ML frameworks
 
 ### Optimization (omniq.optimization)

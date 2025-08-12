@@ -27,6 +27,7 @@
 #include "widgets/CircuitView.h"
 #include "widgets/QuantumStateViewer.h"
 #include "widgets/QubitViewer.h"
+#include "widgets/CircuitBuilder.h"
 
 class MainWindow : public QMainWindow
 {
@@ -48,12 +49,14 @@ private slots:
     void resetCircuit();
     void about();
     void updateStatus();
+    void onGateAdded(const QString& gateType, int qubit, double parameter);
 
 private:
     void setupUI();
     void setupMenus();
     void setupToolbars();
     void setupDockWidgets();
+    void setupCircuitBuilder();
     void setupStatusBar();
     void createActions();
     void loadSettings();
@@ -64,6 +67,7 @@ private:
     CircuitView *circuitView;
     QuantumStateViewer *stateViewer;
     QubitViewer *qubitViewer;
+    CircuitBuilder *circuitBuilder;
     
     // Dock Widgets
     QDockWidget *circuitDock;

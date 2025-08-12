@@ -20,6 +20,7 @@ set(DEBUGGER_SOURCES
     src/widgets/CircuitView.cpp
     src/widgets/QuantumStateViewer.cpp
     src/widgets/QubitViewer.cpp
+    src/widgets/CircuitBuilder.cpp
 )
 
 add_executable(omniq-debugger ${DEBUGGER_SOURCES})

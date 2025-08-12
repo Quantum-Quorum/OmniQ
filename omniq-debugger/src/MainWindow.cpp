@@ -54,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
     setupMenus();
     setupToolbars();
     setupDockWidgets();
+    setupCircuitBuilder();
     setupStatusBar();
     createActions();
     loadSettings();
@@ -79,11 +80,14 @@ void MainWindow::setupUI()
     circuitView = new CircuitView(this);
     stateViewer = new QuantumStateViewer(this);
     qubitViewer = new QubitViewer(this);
+    circuitBuilder = new CircuitBuilder(this);
     
+    mainSplitter->addWidget(circuitBuilder);
     mainSplitter->addWidget(circuitView);
     mainSplitter->addWidget(stateViewer);
     mainSplitter->setStretchFactor(0, 2);
     mainSplitter->setStretchFactor(1, 1);
+    mainSplitter->setStretchFactor(2, 1);
 }
 
 void MainWindow::setupMenus()
@@ -160,6 +164,14 @@ void MainWindow::setupDockWidgets()
     outputText->setReadOnly(true);
     outputDock->setWidget(outputText);
     addDockWidget(Qt::BottomDockWidgetArea, outputDock);
+}
+
+void MainWindow::setupCircuitBuilder()
+{
+    connect(circuitBuilder, &CircuitBuilder::gateAdded, this, &MainWindow::onGateAdded);
+    connect(circuitBuilder, &CircuitBuilder::circuitChanged, this, [this]() {
+        statusBar()->showMessage("Circuit updated");
+    });
 }
 
 void MainWindow::setupStatusBar()
@@ -298,6 +310,52 @@ void MainWindow::resetCircuit()
     if (pauseAction) pauseAction->setEnabled(false);
     statusBar()->showMessage("Circuit reset");
     // TODO: have to reset circuit state
+}
+
+void MainWindow::onGateAdded(const QString& gateType, int qubit, double parameter)
+{
+    if (coreInterface) {
+        QVector<int> qubits;
+        QVector<double> parameters;
+        // Convert gate type to backend format
+        if (gateType == "H") {
+            qubits = {qubit};
+            coreInterface->addGate("H", qubits);
+        } else if (gateType == "X") {
+            qubits = {qubit};
+            coreInterface->addGate("X", qubits);
+        } else if (gateType == "Y") {
+            qubits = {qubit};
+            coreInterface->addGate("Y", qubits);
+        } else if (gateType == "Z") {
+            qubits = {qubit};
+            coreInterface->addGate("Z", qubits);
+        } else if (gateType == "CNOT") {
+            qubits = {qubit, qubit + 1};
+            coreInterface->addGate("CNOT", qubits);
+        } else if (gateType == "SWAP") {
+            qubits = {qubit, qubit + 1};
+            coreInterface->addGate("SWAP", qubits);
+        } else if (gateType == "RX") {
+            qubits = {qubit};
+            parameters = {parameter};
+            coreInterface->addGate("RX", qubits, parameters);
+        } else if (gateType == "RY") {
+            qubits = {qubit};
+            parameters = {parameter};
+            coreInterface->addGate("RY", qubits, parameters);
+        } else if (gateType == "RZ") {
+            qubits = {qubit};
+            parameters = {parameter};
+            coreInterface->addGate("RZ", qubits, parameters);
+        } else if (gateType == "PHASE") {
+            qubits = {qubit};
+            parameters = {parameter};
+            coreInterface->addGate("PHASE", qubits, parameters);
+        }
+        
+        statusBar()->showMessage(QString("Added %1 gate to qubit %2").arg(gateType).arg(qubit));
+    }
 }
 
 void MainWindow::about()

@@ -278,7 +278,7 @@ void MainWindow::runCircuit()
     if (runAction) runAction->setEnabled(false);
     if (pauseAction) pauseAction->setEnabled(true);
     statusBar()->showMessage("Running circuit...");
-    // TODO: Implement circuit execution
+    // TODO: have to implement circuit execution    
 }
 
 void MainWindow::pauseCircuit()
@@ -297,7 +297,7 @@ void MainWindow::resetCircuit()
     if (runAction) runAction->setEnabled(true);
     if (pauseAction) pauseAction->setEnabled(false);
     statusBar()->showMessage("Circuit reset");
-    // TODO: Reset circuit state
+    // TODO: have to reset circuit state
 }
 
 void MainWindow::about()

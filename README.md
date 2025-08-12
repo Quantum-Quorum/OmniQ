@@ -437,8 +437,8 @@ OmniQ is released under the Apache License 2.0. See the [LICENSE](LICENSE) file 
 
 ## Support
 
-* **Documentation:** [https://omniq.readthedocs.io/](https://omniq.readthedocs.io/)
+* **Documentation:** yet to make
 * **Issues:** [GitHub Issues](https://github.com/Quantum-Quorum/OmniQ/issues)
 * **Discussions:** [GitHub Discussions](https://github.com/Quantum-Quorum/OmniQ/discussions)
-* **Email:** goutham.arcot@quantum-quorum.com
+* **Email:** gouthamarcod@gmail.com
 

@@ -366,10 +366,10 @@ omniq-debugger/
 - Check console output for error messages
 
 ## Screenshots
-![alt text](https://github.com/Quantum-Quorum/OmniQ/blob/main/screenshots/Screenshot%202025-08-12%20at%202.25.18%E2%80%AFAM.png)
+![alt text](https://github.com/Quantum-Quorum/OmniQ/blob/main/screenshots/Screenshot1.png)
 
 
-![alt text](https://github.com/Quantum-Quorum/OmniQ/blob/main/screenshots/Screenshot%202025-08-12%20at%202.29.04%E2%80%AFAM.png)
+![alt text](https://github.com/Quantum-Quorum/OmniQ/blob/main/screenshots/Screenshot2.png)
 ## Troubleshooting
 
 ### Common Issues

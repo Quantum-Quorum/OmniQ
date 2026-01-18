@@ -50,6 +50,19 @@ set(OMNIQ_CORE_SOURCES
     src/transpiler/GateDecomposer.cpp
     src/transpiler/LayoutEngine.cpp
     src/transpiler/PassManager.cpp
+    src/modules/qec/Syndrome.cpp
+    src/modules/qec/Stabilizer.cpp
+    src/modules/qec/SurfaceCode.cpp
+    src/modules/qec/MWPMDecoder.cpp
+    src/modules/qec/UnionFindDecoder.cpp
+    src/modules/noise/NoiseChannel.cpp
+    src/modules/noise/DepolarizingChannel.cpp
+    src/modules/noise/AmplitudeDampingChannel.cpp
+    src/modules/noise/PhaseDampingChannel.cpp
+    src/modules/noise/NoiseModel.cpp
+    src/simulators/clifford/CliffordSimulator.cpp
+    src/common/Spectral.cpp
+    src/debugger/ExecutionEngine.cpp
 )
 
 # Create shared library

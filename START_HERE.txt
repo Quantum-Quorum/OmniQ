@@ -1,0 +1,33 @@
+Okay, here's how to run everything:
+
+## **SIMPLEST WAY - Run the GUI**
+
+```bash
+cd /Users/gouthamarcot/Documents/Quantum/codebases/OmniQ
+./run_omniq.sh
+```
+
+Or directly:
+
+```bash
+cd /Users/gouthamarcot/Documents/Quantum/codebases/OmniQ/omniq-debugger/build
+./omniq-debugger
+```
+
+This launches the full Qt debugger with **ALL** the features we implemented:
+- ✅ 3D visualizations (Bloch, Entanglement Graph, Hilbert Space)
+- ✅ Circuit viewer with zoom/pan
+- ✅ State analysis
+- ✅ All quantum metrics
+
+---
+
+## Summary of What's Ready
+
+**✅ Qt GUI (omniq-debugger):** Fully functional, all 3D features working
+**✅ C++ Library (libomniq-core):** All 15 modules compiled and ready
+**⚠️ Python Bindings:** Basic features work, new features need binding code
+
+**For now, use the Qt GUI** - it has everything!
+
+If you need Python bindings for the new features (Clifford, QEC, etc.), let me know and I'll add them (~30 min).

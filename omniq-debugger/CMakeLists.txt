@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_PREFIX_PATH "/opt/homebrew")
 
 # Find Qt6
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGL OpenGLWidgets)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/../libomniq-core/include)
 
@@ -21,6 +21,7 @@ set(DEBUGGER_SOURCES
     src/widgets/QuantumStateViewer.cpp
     src/widgets/QubitViewer.cpp
     src/widgets/CircuitBuilder.cpp
+    src/widgets/BlochSphereWidget.cpp
 )
 
 add_executable(omniq-debugger ${DEBUGGER_SOURCES})
@@ -31,6 +32,8 @@ find_package(Eigen3 REQUIRED)
 target_link_libraries(omniq-debugger PRIVATE
     Qt6::Core
     Qt6::Widgets
+    Qt6::OpenGL
+    Qt6::OpenGLWidgets
     Eigen3::Eigen
     # OmniQ::omniq-core  # commented out just for now
 )

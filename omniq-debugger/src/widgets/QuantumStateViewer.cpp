@@ -222,6 +222,19 @@ QuantumStateViewer::QuantumStateViewer(QWidget *parent)
 
 QuantumStateViewer::~QuantumStateViewer() {}
 
+QSize QuantumStateViewer::sizeHint() const {
+  // Base size for tables and controls
+  int width = 800;
+  int height = 600;
+
+  // If we have a large state vector, increase suggested size
+  if (stateVector_.size() > 16) {
+    height = 800;
+  }
+
+  return QSize(width, height);
+}
+
 void QuantumStateViewer::setupUI() {
   QVBoxLayout *mainLayout = new QVBoxLayout(this);
 

@@ -9,6 +9,8 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QProgressBar>
+#include <QScrollArea>
 #include <QSettings>
 #include <QStatusBar>
 #include <QStyle>
@@ -49,63 +51,68 @@ MainWindow::MainWindow(QWidget *parent)
 MainWindow::~MainWindow() { saveSettings(); }
 
 void MainWindow::setupUI() {
-  mainSplitter = new QSplitter(Qt::Horizontal, this);
-  setCentralWidget(mainSplitter);
+  // Use a central scroll area for the circuit view
+  QScrollArea *centralScrollArea = new QScrollArea(this);
+  centralScrollArea->setWidgetResizable(true);
 
-  circuitView = new CircuitView(this);
+  circuitView = new CircuitView(centralScrollArea);
+  centralScrollArea->setWidget(circuitView);
+  setCentralWidget(centralScrollArea);
+
+  // Initialize other widgets but don't add to layout yet
   stateViewer = new QuantumStateViewer(this);
   qubitViewer = new QubitViewer(this);
   circuitBuilder = new CircuitBuilder(this);
   blochSphereWidget = new BlochSphereWidget(this);
 
-  // Add layout widgets
-  // Main splitter will have: Circuit Builder | Circuit View | (State Viewer /
-  // Bloch Sphere)
-  mainSplitter->addWidget(circuitBuilder);
-  mainSplitter->addWidget(circuitView);
-
-  // Create a tab widget for the right side to switch between State Viewer and
-  // Bloch Sphere
-  QTabWidget *rightTabWidget = new QTabWidget(this);
-  rightTabWidget->addTab(stateViewer, "State Viewer");
-  rightTabWidget->addTab(blochSphereWidget, "Bloch Sphere");
-
-  mainSplitter->addWidget(rightTabWidget);
-
-  mainSplitter->setStretchFactor(0, 1);
-  mainSplitter->setStretchFactor(1, 2);
-  mainSplitter->setStretchFactor(2, 1);
+  printf("MainWindow UI components initialized\n");
 }
 
 void MainWindow::setupMenus() {
   QMenu *fileMenu = menuBar()->addMenu("&File");
-  fileMenu->addAction(newAction);
-  fileMenu->addAction(openAction);
-  fileMenu->addAction(saveAction);
-  fileMenu->addAction(saveAsAction);
+  if (newAction)
+    fileMenu->addAction(newAction);
+  if (openAction)
+    fileMenu->addAction(openAction);
+  if (saveAction)
+    fileMenu->addAction(saveAction);
+  if (saveAsAction)
+    fileMenu->addAction(saveAsAction);
   fileMenu->addSeparator();
-  fileMenu->addAction(exitAction);
+  if (exitAction)
+    fileMenu->addAction(exitAction);
 
   QMenu *debugMenu = menuBar()->addMenu("&Debug");
-  debugMenu->addAction(stepForwardAction);
-  debugMenu->addAction(stepBackwardAction);
+  if (stepForwardAction)
+    debugMenu->addAction(stepForwardAction);
+  if (stepBackwardAction)
+    debugMenu->addAction(stepBackwardAction);
   debugMenu->addSeparator();
-  debugMenu->addAction(runAction);
-  debugMenu->addAction(pauseAction);
-  debugMenu->addAction(resetAction);
+  if (runAction)
+    debugMenu->addAction(runAction);
+  if (pauseAction)
+    debugMenu->addAction(pauseAction);
+  if (resetAction)
+    debugMenu->addAction(resetAction);
 
   QMenu *helpMenu = menuBar()->addMenu("&Help");
-  helpMenu->addAction(aboutAction);
+  if (aboutAction)
+    helpMenu->addAction(aboutAction);
 }
 
 void MainWindow::setupToolbars() {
   debugToolBar = addToolBar("Debug");
-  debugToolBar->addAction(stepBackwardAction);
-  debugToolBar->addAction(stepForwardAction);
+  if (stepBackwardAction)
+    debugToolBar->addAction(stepBackwardAction);
+  if (stepForwardAction)
+    debugToolBar->addAction(stepForwardAction);
   debugToolBar->addSeparator();
-  debugToolBar->addAction(runAction);
-  debugToolBar->addAction(pauseAction);
-  debugToolBar->addAction(resetAction);
+  if (runAction)
+    debugToolBar->addAction(runAction);
+  if (pauseAction)
+    debugToolBar->addAction(pauseAction);
+  if (resetAction)
+    debugToolBar->addAction(resetAction);
   debugToolBar->addSeparator();
 
   debugToolBar->addWidget(new QLabel("Step:"));
@@ -127,43 +134,23 @@ void MainWindow::setupToolbars() {
 }
 
 void MainWindow::setupDockWidgets() {
-  // Circuit dock
-  circuitDock = new QDockWidget("Circuit", this);
-  circuitDock->setWidget(circuitView);
+  // Circuit builder dock
+  circuitDock = new QDockWidget("Circuit Builder", this);
+  circuitDock->setWidget(circuitBuilder);
   addDockWidget(Qt::LeftDockWidgetArea, circuitDock);
 
-  // State viewer dock (Optional: we put it in tab now, but docks are also fine.
-  // Let's keep existing structure for now but maybe make Bloch separate)
-  // Actually, since I put it in the central splitter as a tab, I shouldn't put
-  // it in a dock as well unless I want it detachable. The previous code had
-  // stateViewer in stateDock AND mainSplitter? Let's check lines 87 and 153.
-  // Line 87: mainSplitter->addWidget(stateViewer);
-  // Line 153: stateDock->setWidget(stateViewer);
-  // This is invalid in Qt! A widget can only have one parent.
-  // The previous code was buggy or I misread it.
-  // Ah, wait, if you setWidget on a dock, it reparents it. If you add to
-  // splitter, it reparents it. You can't have the SAME widget in two places. I
-  // will fix this by creating a separate Bloch Dock instead of messing with the
-  // splitter for now, or better, I'll follow the pattern of the existing code
-  // but fix the parentage issue if it exists (or maybe they handle it by not
-  // showing both). Actually, looking at the code, it adds `circuitView` to both
-  // splitter AND dock? That's definitely wrong. Let's assume the previous code
-  // intended for Docks to be the main way to view things, or the Splitter. I'll
-  // add a new Dock for Bloch Sphere which is standard for debuggers.
+  // State viewer dock with scrolling
+  stateDock = new QDockWidget("Quantum State", this);
+  QScrollArea *stateScroll = new QScrollArea(stateDock);
+  stateScroll->setWidgetResizable(true);
+  stateScroll->setWidget(stateViewer);
+  stateDock->setWidget(stateScroll);
+  addDockWidget(Qt::RightDockWidgetArea, stateDock);
 
   // Bloch Sphere dock
   blochDock = new QDockWidget("3D Bloch Sphere", this);
   blochDock->setWidget(blochSphereWidget);
   addDockWidget(Qt::RightDockWidgetArea, blochDock);
-
-  // State viewer dock
-  stateDock = new QDockWidget("Quantum State", this);
-  // Note: stateViewer is already in mainSplitter in setupUI.
-  // If I put it in dock here, it pulls it out of splitter.
-  // I'll assume standard Qt behavior and just add the dock.
-  // For this change, I will just add the Bloch Dock.
-  stateDock->setWidget(stateViewer);
-  addDockWidget(Qt::RightDockWidgetArea, stateDock);
 
   // Qubit viewer dock
   qubitDock = new QDockWidget("Qubit Details", this);

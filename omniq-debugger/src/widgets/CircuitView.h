@@ -26,6 +26,8 @@ public:
   void addGate(int step, int qubit, const QString &gateType);
   void clear();
 
+  QSize sizeHint() const override;
+
 protected:
   void initializeGL() override;
   void resizeGL(int w, int h) override;

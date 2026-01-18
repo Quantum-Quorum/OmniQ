@@ -59,6 +59,8 @@ public:
   explicit QuantumStateViewer(QWidget *parent = nullptr);
   ~QuantumStateViewer();
 
+  QSize sizeHint() const override;
+
 public slots:
   void updateState(const QString &stateString);
   void updateStateVector(const QVector<std::complex<double>> &stateVector);

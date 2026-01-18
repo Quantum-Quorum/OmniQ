@@ -18,10 +18,23 @@ CircuitView::CircuitView(QWidget *parent)
   gates_.append({0, 0, "H"});
   gates_.append({1, 0, "X"});
   gates_.append({2, 0, "CNOT"});
-  gates_.append({3, 0, "H"});
+  printf("CircuitView initialized\n");
 }
 
 CircuitView::~CircuitView() {}
+
+QSize CircuitView::sizeHint() const {
+  int width = 200 + stepSpacing_ * 20; // Default width for 20 steps
+  if (!gates_.isEmpty()) {
+    int maxStep = 0;
+    for (const auto &gate : gates_) {
+      maxStep = std::max(maxStep, gate.step);
+    }
+    width = 200 + stepSpacing_ * (maxStep + 1);
+  }
+  int height = 100 + qubitSpacing_ * numQubits_;
+  return QSize(std::max(width, 800), std::max(height, 400));
+}
 
 void CircuitView::setNumQubits(int numQubits) {
   numQubits_ = numQubits;

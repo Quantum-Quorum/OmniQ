@@ -56,7 +56,7 @@ set(OMNIQ_CORE_SOURCES
 add_library(omniq-core SHARED ${OMNIQ_CORE_SOURCES})
 
 # Link libraries
-target_link_libraries(omniq-core PRIVATE Eigen3::Eigen)
+target_link_libraries(omniq-core PUBLIC Eigen3::Eigen)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(omniq-core PRIVATE OpenMP::OpenMP_CXX)
 endif()
@@ -104,7 +104,7 @@ set_target_properties(omniq-core-static PROPERTIES
     VERSION ${PROJECT_VERSION}
 )
 
-target_link_libraries(omniq-core-static PRIVATE Eigen3::Eigen)
+target_link_libraries(omniq-core-static PUBLIC Eigen3::Eigen)
 if(OpenMP_CXX_FOUND)
     target_link_libraries(omniq-core-static PRIVATE OpenMP::OpenMP_CXX)
 endif()

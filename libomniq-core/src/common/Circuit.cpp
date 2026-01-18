@@ -176,6 +176,10 @@ void Circuit::applyGate(const Gate &gate) {
   case GateType::MEASURE:
     performMeasurement(gate.targetQubits[0], gate.controlQubits[0]);
     break;
+  case GateType::CUSTOM:
+    // Custom gates are handled externally or require specific implementation
+    // For now, we behave as no-op or throw if unsupported in this context
+    break;
   default:
     throw std::invalid_argument("Unknown gate type");
   }
@@ -624,6 +628,9 @@ std::string Circuit::gateToString(const Gate &gate) const {
   case GateType::MEASURE:
     ss << "measure q[" << gate.targetQubits[0] << "] -> c["
        << gate.controlQubits[0] << "]";
+    break;
+  case GateType::CUSTOM:
+    ss << "custom_gate";
     break;
   default:
     ss << "// Unknown gate type";

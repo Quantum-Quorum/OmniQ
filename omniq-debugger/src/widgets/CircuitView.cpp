@@ -68,28 +68,21 @@ void CircuitView::paintGL() {
   painter.scale(zoom_, zoom_);
 
   // Draw qubit lines
-  painter.setPen(QPen(Qt::black, 2.0 / zoom_)); // Adjust line width for zoom
   for (int i = 0; i < numQubits_; ++i) {
-    drawQubitLine(i);
+    drawQubitLine(painter, i);
   }
 
   // Draw gates
   for (const Gate &gate : gates_) {
     int x = 100 + gate.step * stepSpacing_;
     int y = 50 + gate.qubit * qubitSpacing_;
-    drawGate(x, y, gate.type);
+    drawGate(painter, x, y, gate.type);
   }
 
   painter.restore();
-  painter.end();
 }
 
-void CircuitView::drawQubitLine(int qubitIndex) {
-  QPainter painter(this);
-  painter.save();
-  painter.translate(offsetX_, offsetY_);
-  painter.scale(zoom_, zoom_);
-
+void CircuitView::drawQubitLine(QPainter &painter, int qubitIndex) {
   int y = 50 + qubitIndex * qubitSpacing_;
   int lineWidth = width() / zoom_;
 
@@ -101,16 +94,10 @@ void CircuitView::drawQubitLine(int qubitIndex) {
   painter.setFont(QFont("Arial", static_cast<int>(10 / zoom_)));
   painter.drawText(QRect(10, y - 10, 30, 20), Qt::AlignCenter,
                    QString("q%1").arg(qubitIndex));
-
-  painter.restore();
 }
 
-void CircuitView::drawGate(int x, int y, const QString &gateType) {
-  QPainter painter(this);
-  painter.save();
-  painter.translate(offsetX_, offsetY_);
-  painter.scale(zoom_, zoom_);
-
+void CircuitView::drawGate(QPainter &painter, int x, int y,
+                           const QString &gateType) {
   float adjustedGateSize = gateSize_;
   QRectF gateRect(x - adjustedGateSize / 2, y - adjustedGateSize / 2,
                   adjustedGateSize, adjustedGateSize);
@@ -135,21 +122,13 @@ void CircuitView::drawGate(int x, int y, const QString &gateType) {
   painter.setPen(Qt::black);
   painter.setFont(QFont("Arial", static_cast<int>(12 / zoom_), QFont::Bold));
   painter.drawText(gateRect, Qt::AlignCenter, gateType);
-
-  painter.restore();
 }
 
-void CircuitView::drawText(int x, int y, const QString &text) {
-  QPainter painter(this);
-  painter.save();
-  painter.translate(offsetX_, offsetY_);
-  painter.scale(zoom_, zoom_);
-
+void CircuitView::drawText(QPainter &painter, int x, int y,
+                           const QString &text) {
   painter.setPen(Qt::black);
   painter.setFont(QFont("Arial", static_cast<int>(10 / zoom_)));
   painter.drawText(x, y, text);
-
-  painter.restore();
 }
 
 void CircuitView::mousePressEvent(QMouseEvent *event) {

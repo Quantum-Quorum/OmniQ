@@ -235,8 +235,8 @@ void QuantumStateViewer::setupUI() {
   QHBoxLayout *controlsLayout = new QHBoxLayout();
   controlsLayout->addWidget(new QLabel("View:"));
   viewModeSelector_ = new QComboBox(this);
-  viewModeSelector_->addItems(
-      {"State Vector", "Density Matrix", "Entanglement Graph"});
+  viewModeSelector_->addItems({"State Vector", "Density Matrix",
+                               "Entanglement Graph", "Hilbert Space"});
   connect(viewModeSelector_, &QComboBox::currentTextChanged, this,
           &QuantumStateViewer::onViewModeChanged);
   controlsLayout->addWidget(viewModeSelector_);
@@ -277,6 +277,10 @@ void QuantumStateViewer::setupUI() {
   entanglementGraph_ = new EntanglementGraphWidget(this);
   entanglementGraph_->setVisible(false);
   stateLayout->addWidget(entanglementGraph_);
+
+  hilbertSpace_ = new HilbertSpaceWidget(this);
+  hilbertSpace_->setVisible(false);
+  stateLayout->addWidget(hilbertSpace_);
 
   mainLayout->addWidget(stateGroup_);
 
@@ -372,6 +376,7 @@ void QuantumStateViewer::updateStateVector(
     const QVector<std::complex<double>> &stateVector) {
   stateVector_ = stateVector;
   densityMatrixWidget_->setStateVector(stateVector);
+  hilbertSpace_->setStateVector(stateVector);
   updateStateDisplay();
   calculateStateProperties();
 }
@@ -397,9 +402,26 @@ void QuantumStateViewer::updateTomographyData(
 
 void QuantumStateViewer::onViewModeChanged(const QString &mode) {
   if (mode == "State Vector") {
+    densityMatrixWidget_->setVisible(true);
     densityMatrixWidget_->setStateVector(stateVector_);
+    entanglementGraph_->setVisible(false);
+    hilbertSpace_->setVisible(false);
   } else if (mode == "Density Matrix") {
+    densityMatrixWidget_->setVisible(true);
     densityMatrixWidget_->setDensityMatrix(densityMatrix_);
+    entanglementGraph_->setVisible(false);
+    hilbertSpace_->setVisible(false);
+  } else if (mode == "Entanglement Graph") {
+    densityMatrixWidget_->setVisible(false);
+    entanglementGraph_->setVisible(true);
+    hilbertSpace_->setVisible(false);
+    // Trigger update to ensure geometry
+    onCalculateEntanglement();
+  } else if (mode == "Hilbert Space") {
+    densityMatrixWidget_->setVisible(false);
+    entanglementGraph_->setVisible(false);
+    hilbertSpace_->setVisible(true);
+    hilbertSpace_->setStateVector(stateVector_);
   }
   updateStateDisplay();
 }

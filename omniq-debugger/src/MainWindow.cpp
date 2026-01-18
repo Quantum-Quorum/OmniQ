@@ -30,12 +30,12 @@ MainWindow::MainWindow(QWidget *parent)
       resetAction(nullptr), aboutAction(nullptr), isRunning(false),
       currentStep(0), totalSteps(0), updateTimer(nullptr) {
   setupUI();
+  createActions(); // Must create actions BEFORE using them in menus!
   setupMenus();
   setupToolbars();
   setupDockWidgets();
   setupCircuitBuilder();
   setupStatusBar();
-  createActions();
   loadSettings();
 
   updateTimer = new QTimer(this);

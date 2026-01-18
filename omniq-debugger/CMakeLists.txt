@@ -23,6 +23,7 @@ set(DEBUGGER_SOURCES
     src/widgets/CircuitBuilder.cpp
     src/widgets/BlochSphereWidget.cpp
     src/widgets/EntanglementGraphWidget.cpp
+    src/widgets/HilbertSpaceWidget.cpp
 )
 
 add_executable(omniq-debugger ${DEBUGGER_SOURCES})

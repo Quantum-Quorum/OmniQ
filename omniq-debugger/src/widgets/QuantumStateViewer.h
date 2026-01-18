@@ -7,6 +7,7 @@
 
 #include "BlochSphereWidget.h" // Assuming this might be needed later or for consistency
 #include "EntanglementGraphWidget.h"
+#include "HilbertSpaceWidget.h"
 #include <QComboBox>
 #include <QGroupBox>
 #include <QHBoxLayout>
@@ -129,6 +130,7 @@ private:
 
   // Visualization
   class EntanglementGraphWidget *entanglementGraph_;
+  class HilbertSpaceWidget *hilbertSpace_;
 };
 
 #endif // QUANTUMSTATEVIEWER_H

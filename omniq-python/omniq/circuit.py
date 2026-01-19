@@ -57,20 +57,30 @@ class Circuit:
         self.gates.append(('PHASE', qubit, angle))
         return self
 
+    def cp(self, angle, control, target):
+        """Add Controlled-Phase gate"""
+        self.gates.append(('CP', control, target, angle))
+        return self
+
     def to_dict(self):
         """Convert circuit to dictionary for serialization"""
         gate_list = []
         for i, g in enumerate(self.gates):
+            g_type = g[0]
             gate_data = {
-                "type": g[0],
+                "type": g_type,
                 "qubit": g[1],
-                "step": i # Use index as step for simple demo
+                "step": i 
             }
-            if len(g) > 2:
-                if isinstance(g[2], (int, float)):
-                    gate_data["parameter"] = g[2]
-                else: # CNOT target
-                    gate_data["target"] = g[2]
+            
+            if g_type in ('CNOT', 'SWAP'):
+                gate_data["target"] = g[2]
+            elif g_type == 'CP':
+                gate_data["target"] = g[2]
+                gate_data["parameter"] = g[3]
+            elif g_type in ('RX', 'RY', 'RZ', 'PHASE'):
+                gate_data["parameter"] = g[2]
+                
             gate_list.append(gate_data)
         
         return {

@@ -27,6 +27,7 @@ enum class GateType {
   RX,
   RY,
   RZ,
+  CP,
   MEASURE,
   CUSTOM
 };
@@ -85,6 +86,7 @@ public:
   void applyPauliY(int qubit);
   void applyPauliZ(int qubit);
   void applyCNOT(int controlQubit, int targetQubit);
+  void applyControlledPhase(int controlQubit, int targetQubit, double angle);
   void applySWAP(int qubit1, int qubit2);
   void applyPhaseShift(int qubit, double angle);
   void applyRotationX(int qubit, double angle);

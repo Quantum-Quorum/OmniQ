@@ -30,6 +30,7 @@ protected:
   // Mouse interaction for rotation
   void mousePressEvent(QMouseEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
+  void wheelEvent(QWheelEvent *event) override;
 
 private:
   void drawSphere(float radius);
@@ -52,6 +53,7 @@ private:
   QPoint lastMousePos_;
   float rotationX_;
   float rotationY_;
+  float cameraDistance_;
 };
 
 #endif // BLOCHSPHEREWIDGET_H

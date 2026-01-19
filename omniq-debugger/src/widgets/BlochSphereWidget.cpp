@@ -9,7 +9,7 @@
 
 BlochSphereWidget::BlochSphereWidget(QWidget *parent)
     : QOpenGLWidget(parent), program_(nullptr), theta_(0.0f), phi_(0.0f),
-      rotationX_(0.0f), rotationY_(0.0f) {
+      rotationX_(0.0f), rotationY_(0.0f), cameraDistance_(5.0f) {
   setMinimumSize(400, 400);
 }
 
@@ -76,7 +76,7 @@ void BlochSphereWidget::paintGL() {
   glLoadMatrixf(projection_.constData());
 
   view_.setToIdentity();
-  view_.translate(0.0f, 0.0f, -5.0f);
+  view_.translate(0.0f, 0.0f, -cameraDistance_);
   view_.rotate(rotationX_, 1.0f, 0.0f, 0.0f);
   view_.rotate(rotationY_, 0.0f, 1.0f, 0.0f);
 
@@ -203,4 +203,20 @@ void BlochSphereWidget::mouseMoveEvent(QMouseEvent *event) {
   }
 
   lastMousePos_ = event->pos();
+}
+
+void BlochSphereWidget::wheelEvent(QWheelEvent *event) {
+  if (event->angleDelta().y() > 0) {
+    cameraDistance_ *= 0.9f;
+  } else {
+    cameraDistance_ *= 1.1f;
+  }
+
+  // Clamp zoom
+  if (cameraDistance_ < 1.0f)
+    cameraDistance_ = 1.0f;
+  if (cameraDistance_ > 50.0f)
+    cameraDistance_ = 50.0f;
+
+  update();
 }

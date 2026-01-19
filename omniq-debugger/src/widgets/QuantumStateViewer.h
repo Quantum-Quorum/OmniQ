@@ -72,11 +72,15 @@ public slots:
 private slots:
   void onViewModeChanged(const QString &mode);
   void onBasisChanged(const QString &basis);
+  void onAnimateClicked();
+
+signals:
+  void animateToggled(bool active);
+
+private slots:
   void onCalculateEntanglement();
   void onPerformTomography();
   void onExportState();
-  void onAnimateState();
-  void onUpdateAnimation();
 
 private:
   void setupUI();
@@ -85,6 +89,7 @@ private:
   void updateTomographyTable();
   void calculateStateProperties();
   QString formatComplexNumber(const std::complex<double> &z);
+  QLabel *createInfoIcon(const QString &tooltip);
 
   // UI Components
   QComboBox *viewModeSelector_;
@@ -117,10 +122,10 @@ private:
   QMap<QString, double> entanglementMeasures_;
   QVector<double> tomographyData_;
 
-  // Animation
-  QTimer *animationTimer_;
-  double animationPhase_;
-  bool isAnimating_;
+  // Animation (Now handled by MainWindow)
+  // QTimer *animationTimer_;
+  // double animationPhase_;
+  // bool isAnimating_;
 
   // Groups
   QGroupBox *stateGroup_;

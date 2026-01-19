@@ -114,10 +114,11 @@ void DensityMatrixWidget::drawStateVector(QPainter &painter) {
   for (int i = 0; i < size; ++i) {
     int x = (i + 1) * barWidth;
     double magnitude = std::abs(stateVector_[i]);
-    int height = static_cast<int>((magnitude / maxMagnitude) * maxHeight);
-    int y = height - height;
+    int barHeight =
+        static_cast<int>((magnitude / (maxMagnitude + 1e-9)) * maxHeight);
+    int y = maxHeight - barHeight + 5; // Draw from bottom up
 
-    QRect barRect(x - barWidth / 2, y, barWidth - 2, height);
+    QRect barRect(x - barWidth / 2, y, barWidth - 2, barHeight);
 
     // Color based on magnitude
     QColor color = getMatrixColor(magnitude, maxMagnitude);
@@ -126,9 +127,16 @@ void DensityMatrixWidget::drawStateVector(QPainter &painter) {
     painter.drawRect(barRect);
 
     // Draw basis label
-    QString basis = QString("|%1⟩").arg(i, 0, 2);
+    QString basis;
+    if (size == 4) { // 2 qubits
+      static const QStringList bellBasis = {"|Φ⁺⟩", "|Φ⁻⟩", "|Ψ⁺⟩", "|Ψ⁻⟩"};
+      basis = bellBasis[i];
+    } else {
+      basis = QString("|%1⟩").arg(i, 0, 2);
+    }
+
     painter.setPen(Qt::black);
-    painter.drawText(x - barWidth / 2, height + 20, barWidth, 20,
+    painter.drawText(x - barWidth / 2, maxHeight + 10, barWidth, 20,
                      Qt::AlignCenter, basis);
   }
 }
@@ -210,14 +218,9 @@ void DensityMatrixWidget::mousePressEvent(QMouseEvent *event) {
 }
 
 // Quantum State Viewer Implementation
-QuantumStateViewer::QuantumStateViewer(QWidget *parent)
-    : QWidget(parent), animationPhase_(0.0), isAnimating_(false) {
+QuantumStateViewer::QuantumStateViewer(QWidget *parent) : QWidget(parent) {
   setupUI();
-
-  // Setup animation timer
-  animationTimer_ = new QTimer(this);
-  connect(animationTimer_, &QTimer::timeout, this,
-          &QuantumStateViewer::onUpdateAnimation);
+  // Animation setup removed - now handled by MainWindow
 }
 
 QuantumStateViewer::~QuantumStateViewer() {}
@@ -264,8 +267,9 @@ void QuantumStateViewer::setupUI() {
   controlsLayout->addStretch();
 
   animateButton_ = new QPushButton("Animate", this);
+  animateButton_->setCheckable(true);
   connect(animateButton_, &QPushButton::clicked, this,
-          &QuantumStateViewer::onAnimateState);
+          &QuantumStateViewer::onAnimateClicked);
   controlsLayout->addWidget(animateButton_);
 
   exportButton_ = new QPushButton("Export", this);
@@ -277,7 +281,19 @@ void QuantumStateViewer::setupUI() {
 
   // State display group
   stateGroup_ = new QGroupBox("State Representation", this);
-  QHBoxLayout *stateLayout = new QHBoxLayout(stateGroup_);
+  QVBoxLayout *stateOuterLayout = new QVBoxLayout(stateGroup_);
+
+  QHBoxLayout *stateTitleLayout = new QHBoxLayout();
+  stateTitleLayout->addStretch();
+  stateTitleLayout->addWidget(
+      createInfoIcon("<b>State Representation</b><br/>"
+                     "Visualizes the current quantum state using either a "
+                     "State Vector (amplitudes) "
+                     "or a Density Matrix (showing coherence and mixedness)."));
+  stateOuterLayout->addLayout(stateTitleLayout);
+
+  QHBoxLayout *stateLayout = new QHBoxLayout();
+  stateOuterLayout->addLayout(stateLayout);
 
   stateTextEdit_ = new QTextEdit(this);
   stateTextEdit_->setReadOnly(true);
@@ -300,6 +316,16 @@ void QuantumStateViewer::setupUI() {
   // Properties group
   propertiesGroup_ = new QGroupBox("State Properties", this);
   QVBoxLayout *propsLayout = new QVBoxLayout(propertiesGroup_);
+
+  QHBoxLayout *propsTitleLayout = new QHBoxLayout();
+  propsTitleLayout->addStretch();
+  propsTitleLayout->addWidget(createInfoIcon(
+      "<b>State Properties</b><br/>"
+      "Calculates physical metrics of the state:<br/>"
+      "• <b>Purity</b>: Measures how much the state is 'pure' vs 'mixed'.<br/>"
+      "• <b>Fidelity</b>: Comparison with a target state.<br/>"
+      "• <b>Coherence</b>: Measures the 'quantumness' of the superposition."));
+  propsLayout->addLayout(propsTitleLayout);
 
   propertiesTable_ = new QTableWidget(this);
   propertiesTable_->setColumnCount(2);
@@ -330,6 +356,14 @@ void QuantumStateViewer::setupUI() {
   entanglementGroup_ = new QGroupBox("Entanglement Analysis", this);
   QVBoxLayout *entLayout = new QVBoxLayout(entanglementGroup_);
 
+  QHBoxLayout *entTitleLayout = new QHBoxLayout();
+  entTitleLayout->addStretch();
+  entTitleLayout->addWidget(createInfoIcon(
+      "<b>Entanglement Analysis</b><br/>"
+      "Quantifies correlations between qubits. 3D Graph shows strength of "
+      "concurrence/entanglement entropy for multi-qubit systems."));
+  entLayout->addLayout(entTitleLayout);
+
   QHBoxLayout *entControlsLayout = new QHBoxLayout();
   entanglementButton_ = new QPushButton("Calculate Entanglement", this);
   connect(entanglementButton_, &QPushButton::clicked, this,
@@ -357,6 +391,14 @@ void QuantumStateViewer::setupUI() {
   // Tomography group
   tomographyGroup_ = new QGroupBox("State Tomography", this);
   QVBoxLayout *tomLayout = new QVBoxLayout(tomographyGroup_);
+
+  QHBoxLayout *tomTitleLayout = new QHBoxLayout();
+  tomTitleLayout->addStretch();
+  tomTitleLayout->addWidget(createInfoIcon(
+      "<b>Quantum State Tomography</b><br/>"
+      "The process of reconstructing the full quantum state by performing "
+      "multiple measurements in different bases (X, Y, Z)."));
+  tomLayout->addLayout(tomTitleLayout);
 
   QHBoxLayout *tomControlsLayout = new QHBoxLayout();
   tomographyButton_ = new QPushButton("Perform Tomography", this);
@@ -440,7 +482,6 @@ void QuantumStateViewer::onViewModeChanged(const QString &mode) {
 }
 
 void QuantumStateViewer::onBasisChanged(const QString &basis) {
-  // TODO: Implement basis transformation
   updateStateDisplay();
 }
 
@@ -506,32 +547,14 @@ void QuantumStateViewer::onExportState() {
   }
 }
 
-void QuantumStateViewer::onAnimateState() {
-  isAnimating_ = !isAnimating_;
-  if (isAnimating_) {
-    animationTimer_->start(100);
+void QuantumStateViewer::onAnimateClicked() {
+  bool active = animateButton_->isChecked();
+  if (active) {
     animateButton_->setText("Stop Animation");
   } else {
-    animationTimer_->stop();
     animateButton_->setText("Animate");
   }
-}
-
-void QuantumStateViewer::onUpdateAnimation() {
-  animationPhase_ += 0.1;
-  // Shift state vector slightly for a "living" visualization effect
-  if (!stateVector_.isEmpty() && isAnimating_) {
-    QVector<std::complex<double>> animatedState = stateVector_;
-    for (int i = 0; i < animatedState.size(); ++i) {
-      double phase =
-          std::arg(animatedState[i]) + 0.3 * std::sin(animationPhase_);
-      double mag = std::abs(animatedState[i]);
-      animatedState[i] =
-          std::complex<double>(mag * std::cos(phase), mag * std::sin(phase));
-    }
-    densityMatrixWidget_->setStateVector(animatedState);
-    hilbertSpace_->setStateVector(animatedState);
-  }
+  emit animateToggled(active);
 }
 
 void QuantumStateViewer::updateStateDisplay() {
@@ -657,4 +680,20 @@ QString QuantumStateViewer::formatComplexNumber(const std::complex<double> &z) {
         .arg(imag >= 0 ? "+" : "-")
         .arg(std::abs(imag), 0, 'f', 3);
   }
+}
+
+QLabel *QuantumStateViewer::createInfoIcon(const QString &tooltip) {
+  QLabel *infoIcon = new QLabel("ⓘ", this);
+  infoIcon->setToolTip(tooltip);
+  infoIcon->setCursor(Qt::PointingHandCursor);
+  infoIcon->setStyleSheet("QLabel {"
+                          "  color: #2196F3;"
+                          "  font-weight: bold;"
+                          "  font-size: 16px;"
+                          "  padding: 2px;"
+                          "}"
+                          "QLabel:hover {"
+                          "  color: #1976D2;"
+                          "}");
+  return infoIcon;
 }

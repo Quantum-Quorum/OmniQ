@@ -25,7 +25,9 @@
 #include <QSpinBox>
 #include <QSplitter>
 #include <QStatusBar>
+#include <QString>
 #include <QTextEdit>
+#include <QTime>
 #include <QTimer>
 #include <QToolBar>
 #include <QVBoxLayout>
@@ -37,9 +39,18 @@ public:
   explicit MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
 
+  void showEvent(QShowEvent *event) override;
+
   void loadCircuit(const QString &fileName);
   void updateStateDisplays();
   void syncCircuitWithBackend();
+  void onAnimateToggled(bool checked);
+  void onUpdateAnimation();
+  QLabel *createInfoIcon(const QString &tooltip);
+  void logMessage(const QString &message, bool isError = false);
+  static void qtMessageHandler(QtMsgType type,
+                               const QMessageLogContext &context,
+                               const QString &msg);
 
 private slots:
   void newCircuit();
@@ -116,6 +127,15 @@ private:
   // ... (rest of UI components)
 
   // ... (rest of Header)
+  // Animation
+  QTimer *animationTimer_;
+  double animationPhase_;
+  bool isAnimating_;
+  QVector<std::complex<double>> rawStateVector_;
+
+  QTextEdit *outputConsole_;
+  static QTextEdit *s_outputConsole;
+  void setupLogging();
 };
 
 #endif // MAINWINDOW_H

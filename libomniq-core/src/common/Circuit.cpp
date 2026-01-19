@@ -158,6 +158,10 @@ void Circuit::applyGate(const Gate &gate) {
   case GateType::CNOT:
     applyCNOT(gate.controlQubits[0], gate.targetQubits[0]);
     break;
+  case GateType::CP:
+    applyControlledPhase(gate.controlQubits[0], gate.targetQubits[0],
+                         gate.parameters[0]);
+    break;
   case GateType::SWAP:
     applySWAP(gate.targetQubits[0], gate.targetQubits[1]);
     break;
@@ -605,6 +609,11 @@ std::string Circuit::gateToString(const Gate &gate) const {
     ss << "cx q[" << gate.controlQubits[0] << "], q[" << gate.targetQubits[0]
        << "]";
     break;
+  case GateType::CP:
+    ss << "cp(" << std::fixed << std::setprecision(6) << gate.parameters[0]
+       << ") q[" << gate.controlQubits[0] << "], q[" << gate.targetQubits[0]
+       << "]";
+    break;
   case GateType::SWAP:
     ss << "swap q[" << gate.targetQubits[0] << "], q[" << gate.targetQubits[1]
        << "]";
@@ -638,6 +647,28 @@ std::string Circuit::gateToString(const Gate &gate) const {
   }
 
   return ss.str();
+}
+
+void Circuit::applyControlledPhase(int controlQubit, int targetQubit,
+                                   double angle) {
+  validateQubitIndex(controlQubit);
+  validateQubitIndex(targetQubit);
+
+  if (controlQubit == targetQubit) {
+    throw std::invalid_argument("Control and target qubits must be different");
+  }
+
+  long long dim = stateVector_.size();
+  long long controlMask = 1LL << controlQubit;
+  long long targetMask = 1LL << targetQubit;
+  std::complex<double> phase(std::cos(angle), std::sin(angle));
+
+#pragma omp parallel for
+  for (long long i = 0; i < dim; ++i) {
+    if ((i & controlMask) && (i & targetMask)) {
+      stateVector_(i) *= phase;
+    }
+  }
 }
 
 } // namespace omniq

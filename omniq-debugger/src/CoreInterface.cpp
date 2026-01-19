@@ -548,6 +548,8 @@ QString CoreInterface::gateTypeToString(omniq::GateType type) const {
     return "RY";
   case omniq::GateType::RZ:
     return "RZ";
+  case omniq::GateType::CP:
+    return "CP";
   default:
     return "UNKNOWN";
   }
@@ -574,6 +576,8 @@ omniq::GateType CoreInterface::stringToGateType(const QString &type) const {
     return omniq::GateType::RY;
   if (type == "RZ")
     return omniq::GateType::RZ;
+  if (type == "CP")
+    return omniq::GateType::CP;
 
   throw std::invalid_argument("Unknown gate type: " + type.toStdString());
 }

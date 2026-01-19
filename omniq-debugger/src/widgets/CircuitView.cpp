@@ -3,6 +3,7 @@
 //
 
 #include "CircuitView.h"
+#include <QDebug> // Added QDebug include
 #include <QMouseEvent>
 #include <QPainter>
 #include <cmath>
@@ -18,7 +19,7 @@ CircuitView::CircuitView(QWidget *parent)
   gates_.append({0, 0, "H"});
   gates_.append({1, 0, "X"});
   gates_.append({2, 0, "CNOT"});
-  printf("CircuitView initialized\n");
+  qDebug() << "CircuitView initialized"; // Replaced printf with qDebug
 }
 
 CircuitView::~CircuitView() {}

@@ -339,7 +339,18 @@ void EntanglementGraphWidget::mouseMoveEvent(QMouseEvent *event) {
   lastMousePos_ = event->pos();
 }
 
-void EntanglementGraphWidget::wheelEvent(
-    QWheelEvent *event) { // Implementation for zoom
-  // Not implemented in header, but needed for full features
+void EntanglementGraphWidget::wheelEvent(QWheelEvent *event) {
+  if (event->angleDelta().y() > 0) {
+    cameraDistance_ *= 0.9f;
+  } else {
+    cameraDistance_ *= 1.1f;
+  }
+
+  // Clamp zoom
+  if (cameraDistance_ < 0.5f)
+    cameraDistance_ = 0.5f;
+  if (cameraDistance_ > 20.0f)
+    cameraDistance_ = 20.0f;
+
+  update();
 }

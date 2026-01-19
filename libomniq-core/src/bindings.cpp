@@ -27,6 +27,7 @@ PYBIND11_MODULE(_omniq_core, m) {
       .value("RX", GateType::RX)
       .value("RY", GateType::RY)
       .value("RZ", GateType::RZ)
+      .value("CP", GateType::CP)
       .value("MEASURE", GateType::MEASURE)
       .value("CUSTOM", GateType::CUSTOM)
       .export_values();

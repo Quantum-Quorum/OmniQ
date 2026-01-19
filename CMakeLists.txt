@@ -53,6 +53,9 @@ target_include_directories(omniq-core PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
+# Set compile definitions
+target_compile_definitions(omniq-core PRIVATE _USE_MATH_DEFINES)
+
 # Set compiler flags
 target_compile_options(omniq-core PRIVATE
     $<$<CXX_COMPILER_ID:GNU>:-Wall -Wextra -Wpedantic>

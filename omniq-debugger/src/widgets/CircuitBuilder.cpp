@@ -3,6 +3,7 @@
 //
 
 #include "CircuitBuilder.h"
+#include "ClickableLabel.h"
 #include <QApplication>
 #include <QDrag>
 #include <QFile>
@@ -160,11 +161,11 @@ QGroupBox *CircuitBuilder::createGatePaletteGroup() {
   QGroupBox *group = new QGroupBox("Gate Palette", this);
   QVBoxLayout *layout = new QVBoxLayout(group);
 
-  layout->addLayout(
-      createGroupTitleLayout("<b>Gate Palette</b><br/>"
-                             "Contains standard quantum gates. Drag these "
-                             "items onto the circuit timeline "
-                             "to apply operations to specific qubits."));
+  layout->addLayout(createGroupTitleLayout(
+      "<b>Gate Palette</b><br/>"
+      "Drag and drop interface for instantiating <code>Gate</code> objects. "
+      "Available gates correspond to supported operations in the "
+      "<code>CoreInterface</code> backend."));
 
   QLabel *label = new QLabel("Drag gates to circuit:", group);
   layout->addWidget(label);
@@ -179,8 +180,10 @@ QGroupBox *CircuitBuilder::createCircuitViewGroup() {
 
   layout->addLayout(createGroupTitleLayout(
       "<b>Circuit Canvas</b><br/>"
-      "The visual timeline of your quantum program. Gates are executed from "
-      "left to right. The vertical lines represent qubit state timelines."));
+      "Visual timeline representation of the <code>Circuit</code> model. "
+      "Horizontal lines represent qubits (indices 0 to N-1). "
+      "Gates are applied sequentially during "
+      "<code>CoreInterface::executeFull</code>."));
 
   layout->addWidget(circuitView_);
 
@@ -333,18 +336,7 @@ void CircuitBuilder::saveCircuit(const QString &filename) {
 }
 
 QLabel *CircuitBuilder::createInfoIcon(const QString &tooltip) {
-  QLabel *infoIcon = new QLabel("ⓘ", this);
-  infoIcon->setToolTip(tooltip);
-  infoIcon->setCursor(Qt::PointingHandCursor);
-  infoIcon->setStyleSheet("QLabel {"
-                          "  color: #2196F3;"
-                          "  font-weight: bold;"
-                          "  font-size: 16px;"
-                          "  padding: 2px;"
-                          "}"
-                          "QLabel:hover {"
-                          "  color: #1976D2;"
-                          "}");
+  ClickableLabel *infoIcon = new ClickableLabel("ⓘ", tooltip, this);
   return infoIcon;
 }
 

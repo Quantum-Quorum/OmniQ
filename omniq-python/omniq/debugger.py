@@ -14,6 +14,7 @@ class QuantumDebugger:
         possible_paths = [
             Path(__file__).parent.parent.parent / "omniq-debugger" / "build" / "omniq-debugger",
             Path(__file__).parent.parent.parent / "omniq-debugger" / "omniq-debugger",
+            Path(__file__).parent.parent.parent / "build_debugger" / "omniq-debugger",
             Path.home() / ".local" / "bin" / "omniq-debugger",
             "/usr/local/bin/omniq-debugger"
         ]

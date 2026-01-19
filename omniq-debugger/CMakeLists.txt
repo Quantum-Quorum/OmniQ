@@ -24,6 +24,7 @@ set(DEBUGGER_SOURCES
     src/widgets/BlochSphereWidget.cpp
     src/widgets/EntanglementGraphWidget.cpp
     src/widgets/HilbertSpaceWidget.cpp
+    src/widgets/ClickableLabel.cpp
 )
 
 add_executable(omniq-debugger ${DEBUGGER_SOURCES})

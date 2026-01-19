@@ -3,6 +3,7 @@
 //
 
 #include "QuantumStateViewer.h"
+#include "ClickableLabel.h"
 #include <QComboBox>
 #include <QFileDialog>
 #include <QGroupBox>
@@ -285,11 +286,13 @@ void QuantumStateViewer::setupUI() {
 
   QHBoxLayout *stateTitleLayout = new QHBoxLayout();
   stateTitleLayout->addStretch();
-  stateTitleLayout->addWidget(
-      createInfoIcon("<b>State Representation</b><br/>"
-                     "Visualizes the current quantum state using either a "
-                     "State Vector (amplitudes) "
-                     "or a Density Matrix (showing coherence and mixedness)."));
+  stateTitleLayout->addWidget(createInfoIcon(
+      "<b>State Representation</b><br/>"
+      "Visualizes the current quantum state $|\psi\rangle$. "
+      "<ul><li><b>State Vector:</b> Shows complex amplitudes $\alpha_i$ where "
+      "$|\psi\rangle = \sum \alpha_i |i\rangle$.</li>"
+      "<li><b>Density Matrix:</b> Visualizes $\rho = \sum p_i "
+      "|\psi_i\rangle\langle\psi_i|$ for mixed states.</li></ul>"));
   stateOuterLayout->addLayout(stateTitleLayout);
 
   QHBoxLayout *stateLayout = new QHBoxLayout();
@@ -683,17 +686,6 @@ QString QuantumStateViewer::formatComplexNumber(const std::complex<double> &z) {
 }
 
 QLabel *QuantumStateViewer::createInfoIcon(const QString &tooltip) {
-  QLabel *infoIcon = new QLabel("ⓘ", this);
-  infoIcon->setToolTip(tooltip);
-  infoIcon->setCursor(Qt::PointingHandCursor);
-  infoIcon->setStyleSheet("QLabel {"
-                          "  color: #2196F3;"
-                          "  font-weight: bold;"
-                          "  font-size: 16px;"
-                          "  padding: 2px;"
-                          "}"
-                          "QLabel:hover {"
-                          "  color: #1976D2;"
-                          "}");
+  ClickableLabel *infoIcon = new ClickableLabel("ⓘ", tooltip, this);
   return infoIcon;
 }

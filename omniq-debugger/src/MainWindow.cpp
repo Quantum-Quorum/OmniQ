@@ -3,6 +3,7 @@
 //
 
 #include "MainWindow.h"
+#include "widgets/ClickableLabel.h"
 #include <QApplication>
 #include <QComboBox>
 #include <QDebug>
@@ -190,10 +191,12 @@ void MainWindow::setupDockWidgets() {
   circuitHeaderLayout->setContentsMargins(5, 2, 5, 2);
   circuitHeaderLayout->addWidget(new QLabel("Circuit Builder"));
   circuitHeaderLayout->addStretch();
-  circuitHeaderLayout->addWidget(
-      createInfoIcon("<b>Circuit Builder</b><br/>"
-                     "Drag and drop quantum gates onto the timeline. "
-                     "Use the steps to visualize state evolution."));
+  circuitHeaderLayout->addWidget(createInfoIcon(
+      "<b>Circuit Builder</b><br/>"
+      "Constructs the quantum circuit structure. Gates dragged here "
+      "instantiate <code>Gate</code> objects in the <code>Circuit</code> "
+      "model. "
+      "Execution triggers <code>CoreInterface::executeStep</code>."));
   circuitDock->setTitleBarWidget(circuitHeader);
   circuitDock->setWidget(circuitBuilder);
   addDockWidget(Qt::LeftDockWidgetArea, circuitDock);
@@ -205,10 +208,12 @@ void MainWindow::setupDockWidgets() {
   qubitHeaderLayout->setContentsMargins(5, 2, 5, 2);
   qubitHeaderLayout->addWidget(new QLabel("Qubit Details"));
   qubitHeaderLayout->addStretch();
-  qubitHeaderLayout->addWidget(createInfoIcon(
-      "<b>Qubit Details</b><br/>"
-      "Shows a numeric breakdown of each individual qubit's state "
-      "(|0| amplitudes and probabilities)."));
+  qubitHeaderLayout->addWidget(
+      createInfoIcon("<b>Qubit Details</b><br/>"
+                     "Live display of individual qubit statistics derived from "
+                     "the <code>Statevector</code>. "
+                     "Shows |0⟩/|1⟩ probabilities ($|\\alpha|^2, |\\beta|^2$) "
+                     "and phase angles."));
   qubitDock->setTitleBarWidget(qubitHeader);
   qubitDock->setWidget(qubitViewer);
   addDockWidget(Qt::LeftDockWidgetArea, qubitDock);
@@ -226,11 +231,12 @@ void MainWindow::setupDockWidgets() {
   blochHeaderLayout->setContentsMargins(5, 2, 5, 2);
   blochHeaderLayout->addWidget(new QLabel("3D Bloch Sphere"));
   blochHeaderLayout->addStretch();
-  blochHeaderLayout->addWidget(
-      createInfoIcon("<b>3D Bloch Sphere</b><br/>"
-                     "Represents a single qubit's state in a geometric space. "
-                     "Phase determines the horizontal angle, while probability "
-                     "determines vertical angle."));
+  blochHeaderLayout->addWidget(createInfoIcon(
+      "<b>3D Bloch Sphere</b><br/>"
+      "Geometric representation of a single qubit's pure state. "
+      "Visualizes the superposition $\\psi = \\cos(\\theta/2)|0\\rangle + "
+      "e^{i\\phi}\\sin(\\theta/2)|1\\rangle$ "
+      "on the unit sphere."));
   blochDock->setTitleBarWidget(blochHeader);
   blochDock->setWidget(blochSphereWidget);
   addDockWidget(Qt::RightDockWidgetArea, blochDock);
@@ -310,18 +316,7 @@ void MainWindow::qtMessageHandler(QtMsgType type,
 }
 
 QLabel *MainWindow::createInfoIcon(const QString &tooltip) {
-  QLabel *infoIcon = new QLabel("ⓘ", this);
-  infoIcon->setToolTip(tooltip);
-  infoIcon->setCursor(Qt::PointingHandCursor);
-  infoIcon->setStyleSheet("QLabel {"
-                          "  color: #2196F3;"
-                          "  font-weight: bold;"
-                          "  font-size: 16px;"
-                          "  padding: 5px;"
-                          "}"
-                          "QLabel:hover {"
-                          "  color: #1976D2;"
-                          "}");
+  ClickableLabel *infoIcon = new ClickableLabel("ⓘ", tooltip, this);
   return infoIcon;
 }
 

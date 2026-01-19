@@ -12,7 +12,7 @@ jobs:
     name: Ubuntu Latest (CLI & Python)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
@@ -29,7 +29,7 @@ jobs:
         run: cd build && ctest --output-on-failure
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.9'
 
@@ -40,7 +40,7 @@ jobs:
           python -m build
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ubuntu-build
           path: |
@@ -51,7 +51,7 @@ jobs:
     name: macOS Latest (CLI, Debugger & Python)
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3
@@ -87,7 +87,7 @@ jobs:
           python3 -m build
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-build
           path: |
@@ -99,7 +99,7 @@ jobs:
     name: Windows Latest (CLI & Python)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Configure CMake (Core)
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
@@ -117,7 +117,7 @@ jobs:
           python -m build
 
       - name: Upload Artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: windows-build
           path: |

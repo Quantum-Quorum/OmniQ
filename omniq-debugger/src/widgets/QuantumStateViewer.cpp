@@ -300,11 +300,12 @@ void QuantumStateViewer::setupUI() {
   stateTitleLayout->addStretch();
   stateTitleLayout->addWidget(createInfoIcon(
       "<b>State Representation</b><br/>"
-      "Visualizes the current quantum state $|\psi\rangle$. "
-      "<ul><li><b>State Vector:</b> Shows complex amplitudes $\alpha_i$ where "
-      "$|\psi\rangle = \sum \alpha_i |i\rangle$.</li>"
-      "<li><b>Density Matrix:</b> Visualizes $\rho = \sum p_i "
-      "|\psi_i\rangle\langle\psi_i|$ for mixed states.</li></ul>"));
+      "<ul><li><b>State Vector:</b> Visualizes the current quantum state "
+      "$|\\psi\\rangle$. "
+      "It represents the probability amplitudes of the qubits. "
+      "$|\\psi\\rangle = \\sum \\alpha_i |i\\rangle$.</li>"
+      "<li><b>Density Matrix:</b> Visualizes $\\rho = \\sum p_i "
+      "|\\psi_i\\rangle\\langle\\psi_i|$ for mixed states.</li></ul>"));
   stateOuterLayout->addLayout(stateTitleLayout);
 
   QHBoxLayout *stateLayout = new QHBoxLayout();

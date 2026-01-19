@@ -31,6 +31,7 @@ add_executable(omniq-debugger MACOSX_BUNDLE ${DEBUGGER_SOURCES})
 
 
 find_package(Eigen3 REQUIRED)
+find_package(OpenGL REQUIRED)
 
 target_link_libraries(omniq-debugger PRIVATE
     Qt6::Core
@@ -38,6 +39,7 @@ target_link_libraries(omniq-debugger PRIVATE
     Qt6::OpenGL
     Qt6::OpenGLWidgets
     Eigen3::Eigen
+    OpenGL::GL
     # OmniQ::omniq-core  # commented out just for now
 )
 

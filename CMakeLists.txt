@@ -83,7 +83,7 @@ if(BUILD_TESTING)
 
     # Test executables
     add_executable(test_core tests/test_core.cpp)
-    target_link_libraries(test_core PRIVATE omniq-core GTest::gtest GTest::gtest_main GTest::gmock)
+    target_link_libraries(test_core PRIVATE omniq-core GTest::gtest GTest::gtest_main)
 
     add_executable(test_algorithms test_algorithms.cpp)
     target_link_libraries(test_algorithms PRIVATE omniq-core GTest::gtest GTest::gtest_main)

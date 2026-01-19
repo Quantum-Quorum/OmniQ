@@ -56,11 +56,38 @@ class Circuit:
         """Add Phase gate"""
         self.gates.append(('PHASE', qubit, angle))
         return self
-    
-    def debug(self):
+
+    def to_dict(self):
+        """Convert circuit to dictionary for serialization"""
+        gate_list = []
+        for i, g in enumerate(self.gates):
+            gate_data = {
+                "type": g[0],
+                "qubit": g[1],
+                "step": i # Use index as step for simple demo
+            }
+            if len(g) > 2:
+                if isinstance(g[2], (int, float)):
+                    gate_data["parameter"] = g[2]
+                else: # CNOT target
+                    gate_data["target"] = g[2]
+            gate_list.append(gate_data)
+        
+        return {
+            "num_qubits": self.num_qubits,
+            "gates": gate_list
+        }
+
+    def save_json(self, path):
+        """Save circuit as JSON"""
+        import json
+        with open(path, 'w') as f:
+            json.dump(self.to_dict(), f, indent=2)
+
+    def debug(self, noise_model=None):
         """Open debugger (like df.head())"""
         from .debugger import show_debugger
-        return show_debugger(self)
+        return show_debugger(self, noise_model=noise_model)
     
     def show(self):
         """Open debugger (like df.show())"""

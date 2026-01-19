@@ -4,8 +4,12 @@
 
 #include "MainWindow.h"
 #include <QApplication>
+#include <QFile>
 #include <QFileDialog>
 #include <QIcon>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -230,13 +234,43 @@ void MainWindow::newCircuit() {
 }
 
 void MainWindow::openCircuit() {
-  QString fileName = QFileDialog::getOpenFileName(
-      this, "Open Quantum Circuit", "",
-      "Circuit Files (*.qasm *.json);;All Files (*)");
+  QString fileName =
+      QFileDialog::getOpenFileName(this, "Open Quantum Circuit", "",
+                                   "Circuit Files (*.json);;All Files (*)");
   if (!fileName.isEmpty()) {
-    // TODO: have to implement circuit loading
-    statusBar()->showMessage("Opened circuit: " + fileName);
+    loadCircuit(fileName);
   }
+}
+
+void MainWindow::loadCircuit(const QString &fileName) {
+  QFile file(fileName);
+  if (!file.open(QIODevice::ReadOnly)) {
+    statusBar()->showMessage("Failed to open file: " + fileName);
+    return;
+  }
+
+  QByteArray data = file.readAll();
+  QJsonDocument doc = QJsonDocument::fromJson(data);
+  if (!doc.isObject()) {
+    statusBar()->showMessage("Invalid circuit file format");
+    return;
+  }
+
+  QJsonObject obj = doc.object();
+  int numQubits = obj["num_qubits"].toInt(1);
+  circuitView->setNumQubits(numQubits);
+  circuitView->clear();
+
+  QJsonArray gates = obj["gates"].toArray();
+  for (const auto &gateVal : gates) {
+    QJsonObject gateObj = gateVal.toObject();
+    QString type = gateObj["type"].toString();
+    int qubit = gateObj["qubit"].toInt();
+    int step = gateObj["step"].toInt();
+    circuitView->addGate(step, qubit, type);
+  }
+
+  statusBar()->showMessage("Loaded circuit: " + fileName);
 }
 
 void MainWindow::saveCircuit() {

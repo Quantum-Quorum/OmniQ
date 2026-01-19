@@ -37,6 +37,8 @@ public:
   explicit MainWindow(QWidget *parent = nullptr);
   ~MainWindow();
 
+  void loadCircuit(const QString &fileName);
+
 private slots:
   void newCircuit();
   void openCircuit();

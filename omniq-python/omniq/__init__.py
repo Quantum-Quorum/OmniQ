@@ -10,6 +10,7 @@ __email__ = "goutham.arcot@quantum-quorum.com"
 
 # Import core modules
 from .circuit import Circuit
+from .noise import NoiseModel
 # from .device import Device, SimulatorDevice, QPUDevice
 # from .algorithms import GroversAlgorithm, QPE
 # from .crypto import ShorsAlgorithm, GroversCrypto
@@ -49,6 +50,7 @@ SUPPORTED_DEVICES = ['default.qubit', 'lightning.qubit', 'ibmq.manila', 'ionq.si
 __all__ = [
     # Core classes
     'Circuit',
+    'NoiseModel',
     
     # Debugger
     'show_debugger',

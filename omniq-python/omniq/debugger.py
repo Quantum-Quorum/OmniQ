@@ -24,16 +24,35 @@ class QuantumDebugger:
         
         raise FileNotFoundError("OmniQ debugger not found. Please build it first.")
     
-    def show(self, circuit=None):
+    def show(self, circuit=None, noise_model=None):
         """Show the quantum debugger GUI (like df.head())"""
         if circuit is not None:
             self.circuit = circuit
         
+        import tempfile
+        import json
+        
+        # Create a temporary file for the circuit
+        temp_file = tempfile.NamedTemporaryFile(suffix='.json', delete=False)
+        temp_path = temp_file.name
+        temp_file.close()
+        
+        data = {}
+        if self.circuit:
+            data = self.circuit.to_dict()
+        
+        if noise_model:
+            data["noise_model"] = noise_model.to_dict()
+            
+        with open(temp_path, 'w') as f:
+            json.dump(data, f, indent=2)
+        
         try:
-            subprocess.Popen([self.debugger_path], 
+            # Pass the temp file path as an argument
+            subprocess.Popen([self.debugger_path, temp_path], 
                            stdout=subprocess.DEVNULL, 
                            stderr=subprocess.DEVNULL)
-            print("🚀 OmniQ Quantum Debugger opened!")
+            print(f"🚀 OmniQ Quantum Debugger opened with circuit and noise model!")
             print("   • Use the GUI to inspect quantum states")
             print("   • Drag and drop gates to build circuits")
             print("   • Step through quantum operations")
@@ -50,10 +69,10 @@ class QuantumDebugger:
         return self.show(circuit)
 
 # Convenience function
-def show_debugger(circuit=None):
+def show_debugger(circuit=None, noise_model=None):
     """Quick function to show debugger (like df.head())"""
     debugger = QuantumDebugger(circuit)
-    return debugger.show()
+    return debugger.show(noise_model=noise_model)
 
 # Add debugger methods to Circuit class
 def add_debugger_to_circuit():

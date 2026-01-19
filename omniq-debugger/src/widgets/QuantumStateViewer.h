@@ -32,6 +32,7 @@ public:
   explicit DensityMatrixWidget(QWidget *parent = nullptr);
   void setDensityMatrix(const QVector<QVector<std::complex<double>>> &matrix);
   void setStateVector(const QVector<std::complex<double>> &state);
+  void setBasisLabels(const QStringList &labels);
 
 protected:
   void paintEvent(QPaintEvent *event) override;
@@ -46,6 +47,7 @@ private:
 
   QVector<QVector<std::complex<double>>> densityMatrix_;
   QVector<std::complex<double>> stateVector_;
+  QStringList basisLabels_;
   bool showDensityMatrix_;
   int selectedRow_;
   int selectedCol_;
@@ -62,6 +64,7 @@ public:
   QSize sizeHint() const override;
 
 public slots:
+  void setViewMode(const QString &mode);
   void updateState(const QString &stateString);
   void updateStateVector(const QVector<std::complex<double>> &stateVector);
   void updateDensityMatrix(
@@ -89,6 +92,9 @@ private:
   void updateTomographyTable();
   void calculateStateProperties();
   QString formatComplexNumber(const std::complex<double> &z);
+  QVector<std::complex<double>> getStateInBasis(const QString &basis) const;
+  QVector<QVector<std::complex<double>>>
+  getDensityMatrixInBasis(const QString &basis) const;
   QLabel *createInfoIcon(const QString &tooltip);
 
   // UI Components

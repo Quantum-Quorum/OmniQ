@@ -27,7 +27,7 @@ set(DEBUGGER_SOURCES
     src/widgets/ClickableLabel.cpp
 )
 
-add_executable(omniq-debugger ${DEBUGGER_SOURCES})
+add_executable(omniq-debugger MACOSX_BUNDLE ${DEBUGGER_SOURCES})
 
 
 find_package(Eigen3 REQUIRED)
@@ -56,4 +56,5 @@ set_target_properties(omniq-debugger PROPERTIES
 # Install
 install(TARGETS omniq-debugger
     RUNTIME DESTINATION bin
+    BUNDLE DESTINATION .
 ) 

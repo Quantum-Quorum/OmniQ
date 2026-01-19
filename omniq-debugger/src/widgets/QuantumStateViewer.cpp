@@ -15,10 +15,13 @@
 #include <QPainter>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QStringList>
 #include <QTableWidget>
 #include <QTextEdit>
 #include <QTimer>
 #include <QVBoxLayout>
+#include <QVector>
+#include <QWidget>
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -42,6 +45,11 @@ void DensityMatrixWidget::setStateVector(
     const QVector<std::complex<double>> &state) {
   stateVector_ = state;
   showDensityMatrix_ = false;
+  update();
+}
+
+void DensityMatrixWidget::setBasisLabels(const QStringList &labels) {
+  basisLabels_ = labels;
   update();
 }
 
@@ -129,9 +137,8 @@ void DensityMatrixWidget::drawStateVector(QPainter &painter) {
 
     // Draw basis label
     QString basis;
-    if (size == 4) { // 2 qubits
-      static const QStringList bellBasis = {"|Φ⁺⟩", "|Φ⁻⟩", "|Ψ⁺⟩", "|Ψ⁻⟩"};
-      basis = bellBasis[i];
+    if (!basisLabels_.isEmpty() && i < basisLabels_.size()) {
+      basis = basisLabels_[i];
     } else {
       basis = QString("|%1⟩").arg(i, 0, 2);
     }
@@ -155,15 +162,20 @@ void DensityMatrixWidget::drawBasisLabels(QPainter &painter) {
     // Column labels
     for (int j = 0; j < size; ++j) {
       int x = startX + j * cellSize;
-      painter.drawText(x, startY - 20, cellSize, 20, Qt::AlignCenter,
-                       QString("|%1⟩").arg(j));
+      QString label = (!basisLabels_.isEmpty() && j < basisLabels_.size())
+                          ? basisLabels_[j]
+                          : QString("|%1⟩").arg(j);
+      painter.drawText(x, startY - 20, cellSize, 20, Qt::AlignCenter, label);
     }
 
     // Row labels
     for (int i = 0; i < size; ++i) {
       int y = startY + i * cellSize;
+      QString label = (!basisLabels_.isEmpty() && i < basisLabels_.size())
+                          ? basisLabels_[i]
+                          : QString("⟨%1|").arg(i);
       painter.drawText(startX - 30, y, 30, cellSize, Qt::AlignCenter,
-                       QString("⟨%1|").arg(i));
+                       label); // Simplified <x| label logic
     }
   }
 }
@@ -433,9 +445,10 @@ void QuantumStateViewer::updateState(const QString &stateString) {
 void QuantumStateViewer::updateStateVector(
     const QVector<std::complex<double>> &stateVector) {
   stateVector_ = stateVector;
-  densityMatrixWidget_->setStateVector(stateVector);
-  hilbertSpace_->setStateVector(stateVector);
-  updateStateDisplay();
+
+  // Apply current basis view
+  onBasisChanged(basisSelector_->currentText());
+
   calculateStateProperties();
 }
 
@@ -458,34 +471,234 @@ void QuantumStateViewer::updateTomographyData(
   updateTomographyTable();
 }
 
+void QuantumStateViewer::setViewMode(const QString &mode) {
+  viewModeSelector_->setCurrentText(mode);
+}
+
 void QuantumStateViewer::onViewModeChanged(const QString &mode) {
   if (mode == "State Vector") {
-    densityMatrixWidget_->setVisible(true);
-    densityMatrixWidget_->setStateVector(stateVector_);
     entanglementGraph_->setVisible(false);
     hilbertSpace_->setVisible(false);
   } else if (mode == "Density Matrix") {
-    densityMatrixWidget_->setVisible(true);
-    densityMatrixWidget_->setDensityMatrix(densityMatrix_);
     entanglementGraph_->setVisible(false);
     hilbertSpace_->setVisible(false);
   } else if (mode == "Entanglement Graph") {
     densityMatrixWidget_->setVisible(false);
     entanglementGraph_->setVisible(true);
     hilbertSpace_->setVisible(false);
-    // Trigger update to ensure geometry
     onCalculateEntanglement();
   } else if (mode == "Hilbert Space") {
     densityMatrixWidget_->setVisible(false);
     entanglementGraph_->setVisible(false);
     hilbertSpace_->setVisible(true);
-    hilbertSpace_->setStateVector(stateVector_);
+    hilbertSpace_->setStateVector(
+        stateVector_); // Fallback, onBasisChanged will overwrite
   }
-  updateStateDisplay();
+
+  // Refresh with current basis
+  onBasisChanged(basisSelector_->currentText());
 }
 
 void QuantumStateViewer::onBasisChanged(const QString &basis) {
-  updateStateDisplay();
+  QVector<std::complex<double>> transformedState = getStateInBasis(basis);
+  QVector<QVector<std::complex<double>>> transformedDensityMatrix;
+
+  // Set labels
+  QStringList labels;
+  if (basis == "Bell" &&
+      (stateVector_.size() == 4 || densityMatrix_.size() == 4)) {
+    labels = {"|Φ⁺⟩", "|Ψ⁺⟩", "|Φ⁻⟩", "|Ψ⁻⟩"}; // Matches our transform order
+  } else if (basis == "GHZ" &&
+             (stateVector_.size() == 8 || densityMatrix_.size() == 8)) {
+    labels = {"|GHZ₀⟩", "|1⟩", "|2⟩", "|3⟩", "|4⟩", "|5⟩", "|6⟩", "|GHZ₁⟩"};
+  } else if (basis == "W" &&
+             (stateVector_.size() == 8 || densityMatrix_.size() == 8)) {
+    labels = {"|000⟩", "|W⟩", "|W⟂₁⟩", "|W⟂₂⟩",
+              "|111⟩", "|W̅⟩", "|W̅⟂₁⟩", "|W̅⟂₂⟩"};
+  } else if (basis == "Computational") {
+    // Default to empty (widgets handle |i>) or generate explicit
+    // labels.clear();
+  }
+
+  if (viewModeSelector_->currentText() == "Density Matrix") {
+    transformedDensityMatrix = getDensityMatrixInBasis(basis);
+    densityMatrixWidget_->setDensityMatrix(transformedDensityMatrix);
+    densityMatrixWidget_->setBasisLabels(labels);
+    densityMatrixWidget_->setVisible(true);
+  } else if (viewModeSelector_->currentText() == "State Vector") {
+    densityMatrixWidget_->setStateVector(transformedState);
+    densityMatrixWidget_->setBasisLabels(labels);
+    densityMatrixWidget_->setVisible(true);
+    updateStateDisplay();
+  } else if (viewModeSelector_->currentText() == "Hilbert Space") {
+    hilbertSpace_->setStateVector(transformedState);
+    // hilbertSpace_->setLabels(labels); // Assuming it might not handle labels
+    // yet
+    updateStateDisplay();
+  }
+}
+
+QVector<QVector<std::complex<double>>>
+QuantumStateViewer::getDensityMatrixInBasis(const QString &basis) const {
+  if (densityMatrix_.isEmpty())
+    return densityMatrix_;
+
+  if (basis == "Computational")
+    return densityMatrix_;
+
+  int n = densityMatrix_.size();
+
+  if (basis == "Bell" && n == 4) {
+    // ... (Existing Bell Logic) ...
+    QVector<QVector<std::complex<double>>> rho = densityMatrix_;
+    std::swap(rho[2], rho[3]);
+    for (int i = 0; i < 4; ++i)
+      std::swap(rho[i][2], rho[i][3]);
+
+    QVector<QVector<std::complex<double>>> res(
+        4, QVector<std::complex<double>>(4));
+    for (int r = 0; r < 2; ++r) {
+      for (int c = 0; c < 2; ++c) {
+        std::complex<double> A = rho[r][c];
+        std::complex<double> B = rho[r][c + 2];
+        std::complex<double> C = rho[r + 2][c];
+        std::complex<double> D = rho[r + 2][c + 2];
+
+        res[r][c] = 0.5 * (A + B + C + D);
+        res[r][c + 2] = 0.5 * (A - B + C - D);
+        res[r + 2][c] = 0.5 * (A + B - C - D);
+        res[r + 2][c + 2] = 0.5 * (A - B - C + D);
+      }
+    }
+    return res;
+  } else if (basis == "GHZ" && n == 8) {
+    // GHZ Inverse on Density Matrix: CX(1,2) -> CX(0,1) -> H(0)
+    QVector<QVector<std::complex<double>>> rho = densityMatrix_;
+
+    // 1. CX(1,2): Swap 2<->3 (010<->011) and 6<->7 (110<->111)
+    std::swap(rho[2], rho[3]);
+    std::swap(rho[6], rho[7]);    // Rows
+    for (int i = 0; i < 8; ++i) { // Cols
+      std::swap(rho[i][2], rho[i][3]);
+      std::swap(rho[i][6], rho[i][7]);
+    }
+
+    // 2. CX(0,1): Swap 4<->6 (100<->110) and 5<->7 (101<->111)
+    std::swap(rho[4], rho[6]);
+    std::swap(rho[5], rho[7]);    // Rows
+    for (int i = 0; i < 8; ++i) { // Cols
+      std::swap(rho[i][4], rho[i][6]);
+      std::swap(rho[i][5], rho[i][7]);
+    }
+
+    // 3. H(0): Block Hadamard on MSB (indices 0-3 vs 4-7)
+    QVector<QVector<std::complex<double>>> res(
+        8, QVector<std::complex<double>>(8));
+    for (int r = 0; r < 4; ++r) {
+      for (int c = 0; c < 4; ++c) {
+        std::complex<double> A = rho[r][c];
+        std::complex<double> B = rho[r][c + 4];
+        std::complex<double> C = rho[r + 4][c];
+        std::complex<double> D = rho[r + 4][c + 4];
+
+        res[r][c] = 0.5 * (A + B + C + D);
+        res[r][c + 4] = 0.5 * (A - B + C - D);
+        res[r + 4][c] = 0.5 * (A + B - C - D);
+        res[r + 4][c + 4] = 0.5 * (A - B - C + D);
+      }
+    }
+    return res;
+  }
+
+  return densityMatrix_;
+}
+
+QVector<std::complex<double>>
+QuantumStateViewer::getStateInBasis(const QString &basis) const {
+  if (stateVector_.isEmpty())
+    return stateVector_;
+
+  int n = stateVector_.size();
+  int numQubits = static_cast<int>(std::log2(n));
+  QVector<std::complex<double>> result = stateVector_;
+
+  if (basis == "Computational") {
+    return result;
+  } else if (basis == "Bell" && numQubits == 2) {
+    // ... (Bell logic existing) ...
+    // Bell Basis Transformation: Inverse of (H(0) -> CNOT(0,1))
+    QVector<std::complex<double>> temp = result;
+    std::swap(temp[2], temp[3]);
+    result[0] = (temp[0] + temp[2]) / std::sqrt(2.0);
+    result[1] = (temp[1] + temp[3]) / std::sqrt(2.0);
+    result[2] = (temp[0] - temp[2]) / std::sqrt(2.0);
+    result[3] = (temp[1] - temp[3]) / std::sqrt(2.0);
+    return result;
+  } else if (basis == "GHZ" && numQubits == 3) {
+    // GHZ Inverse: CX(1,2) -> CX(0,1) -> H(0)
+    QVector<std::complex<double>> temp = result;
+
+    // 1. CX(1,2) (q1 ctrl, q2 target) -> Swap (010 2, 011 3) and (110 6, 111 7)
+    std::swap(temp[2], temp[3]);
+    std::swap(temp[6], temp[7]);
+
+    // 2. CX(0,1) (q0 ctrl, q1 target) -> Swap (100 4, 110 6) and (101 5, 111 7)
+    std::swap(temp[4], temp[6]);
+    std::swap(temp[5], temp[7]);
+
+    // 3. H(0)
+    QVector<std::complex<double>> res = temp;
+    double invSqrt2 = 1.0 / std::sqrt(2.0);
+    for (int i = 0; i < 4; ++i) {
+      res[i] = (temp[i] + temp[i + 4]) * invSqrt2;
+      res[i + 4] = (temp[i] - temp[i + 4]) * invSqrt2;
+    }
+    return res;
+  } else if (basis == "W" && numQubits == 3) {
+    // 3-Qubit W-Basis Transformation
+    // We project the state onto an orthonormal basis set containing the W
+    // state. Basis Definition: 0: |000⟩ 1: |W⟩       = (|001⟩ + |010⟩ + |100⟩)
+    // / √3 2: |W⟂₁⟩     = (|010⟩ - |001⟩) / √2 3: |W⟂₂⟩     = (|001⟩ + |010⟩ -
+    // 2|100⟩) / √6 4: |111⟩ 5: |W̅⟩       = (|011⟩ + |101⟩ + |110⟩) / √3 6:
+    // |W̅⟂₁⟩     = (|101⟩ - |011⟩) / √2 7: |W̅⟂₂⟩     = (|011⟩ + |101⟩ - 2|110⟩)
+    // / √6
+
+    QVector<std::complex<double>> res(8, 0.0);
+    const double r2 = 1.0 / std::sqrt(2.0);
+    const double r3 = 1.0 / std::sqrt(3.0);
+    const double r6 = 1.0 / std::sqrt(6.0);
+
+    // Map indices to amplitudes for clarity
+    auto &s = stateVector_; // alias for calculation (const)
+
+    // |000⟩ part
+    res[0] = s[0];
+
+    // 1-excitation subspace (indices 1, 2, 4) -> (001, 010, 100)
+    std::complex<double> c001 = s[1];
+    std::complex<double> c010 = s[2];
+    std::complex<double> c100 = s[4];
+
+    res[1] = r3 * (c001 + c010 + c100);       // |W⟩
+    res[2] = r2 * (c010 - c001);              // |W⟂₁⟩
+    res[3] = r6 * (c001 + c010 - 2.0 * c100); // |W⟂₂⟩
+
+    // |111⟩ part
+    res[4] = s[7];
+
+    // 2-excitation subspace (indices 3, 5, 6) -> (011, 101, 110)
+    std::complex<double> c011 = s[3];
+    std::complex<double> c101 = s[5];
+    std::complex<double> c110 = s[6];
+
+    res[5] = r3 * (c011 + c101 + c110);       // |W̅⟩
+    res[6] = r2 * (c101 - c011);              // |W̅⟂₁⟩
+    res[7] = r6 * (c011 + c101 - 2.0 * c110); // |W̅⟂₂⟩
+
+    return res;
+  }
+
+  return result;
 }
 
 void QuantumStateViewer::onCalculateEntanglement() {
@@ -561,11 +774,14 @@ void QuantumStateViewer::onAnimateClicked() {
 }
 
 void QuantumStateViewer::updateStateDisplay() {
-  QString displayText = "State Vector:\n";
-  for (int i = 0; i < stateVector_.size(); ++i) {
+  QString basis = basisSelector_->currentText();
+  QVector<std::complex<double>> displayVector = getStateInBasis(basis);
+
+  QString displayText = "State Vector (" + basis + " Basis):\n";
+  for (int i = 0; i < displayVector.size(); ++i) {
     displayText += QString("|%1⟩: %2\n")
                        .arg(i, 0, 2)
-                       .arg(formatComplexNumber(stateVector_[i]));
+                       .arg(formatComplexNumber(displayVector[i]));
   }
   stateTextEdit_->setText(displayText);
 }

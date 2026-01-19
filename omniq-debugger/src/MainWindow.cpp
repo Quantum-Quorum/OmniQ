@@ -397,6 +397,13 @@ void MainWindow::loadCircuit(const QString &fileName) {
   if (coreInterface->loadCircuit(fileName)) {
     coreInterface->executeFull(); // Run all gates to get the final state
     syncCircuitWithBackend();
+
+    // Apply recommended view mode if present
+    QString viewMode = coreInterface->getRecommendedViewMode();
+    if (!viewMode.isEmpty() && stateViewer) {
+      stateViewer->setViewMode(viewMode);
+    }
+
     statusBar()->showMessage("Loaded circuit: " + fileName);
     qDebug() << "Circuit loaded and executed. State vector size:"
              << coreInterface->getStateVectorComplex().size();

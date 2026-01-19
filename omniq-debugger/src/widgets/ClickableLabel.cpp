@@ -4,6 +4,7 @@
 
 #include "ClickableLabel.h"
 #include <QCursor>
+#include <QDebug>
 #include <QMessageBox>
 #include <QMouseEvent>
 
@@ -28,6 +29,7 @@ ClickableLabel::ClickableLabel(const QString &text, const QString &tooltip,
 
 void ClickableLabel::mousePressEvent(QMouseEvent *event) {
   if (event->button() == Qt::LeftButton) {
+    qDebug() << "Info icon clicked: " << tooltipText_;
     // Show the tooltip text in a message box
     // Use the window title as the box title if possible, or just "Info"
     QString title = "Information";

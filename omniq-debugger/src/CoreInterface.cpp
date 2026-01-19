@@ -427,6 +427,12 @@ bool CoreInterface::importCircuit(const QJsonObject &circuitData) {
   // Clear the dummy gates from createCircuit
   circuit_->reset();
 
+  if (circuitData.contains("initial_view")) {
+    recommendedViewMode_ = circuitData["initial_view"].toString();
+  } else {
+    recommendedViewMode_.clear();
+  }
+
   if (circuitData.contains("gates")) {
     QJsonArray gates = circuitData["gates"].toArray();
     for (const auto &gateVal : gates) {

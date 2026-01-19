@@ -157,6 +157,8 @@ public:
   QJsonObject exportCircuit() const;
   bool importCircuit(const QJsonObject &circuitData);
 
+  QString getRecommendedViewMode() const { return recommendedViewMode_; }
+
   QString getLastError() const;
   void clearError();
 
@@ -174,6 +176,7 @@ private:
   int currentStep_;
   int totalSteps_;
   QString lastError_;
+  QString recommendedViewMode_;
   bool isExecuting_;
 
   QMap<int, QVector<double>>

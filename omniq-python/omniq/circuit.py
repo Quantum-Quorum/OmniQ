@@ -94,14 +94,14 @@ class Circuit:
         with open(path, 'w') as f:
             json.dump(self.to_dict(), f, indent=2)
 
-    def debug(self, noise_model=None):
+    def debug(self, noise_model=None, view_mode=None):
         """Open debugger (like df.head())"""
         from .debugger import show_debugger
-        return show_debugger(self, noise_model=noise_model)
+        return show_debugger(self, noise_model=noise_model, view_mode=view_mode)
     
-    def show(self):
+    def show(self, view_mode=None):
         """Open debugger (like df.show())"""
-        return self.debug()
+        return self.debug(view_mode=view_mode)
     
     def __str__(self):
         return f"Circuit({self.num_qubits} qubits, {len(self.gates)} gates)"

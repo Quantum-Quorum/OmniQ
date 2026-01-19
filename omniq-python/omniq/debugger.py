@@ -25,7 +25,7 @@ class QuantumDebugger:
         
         raise FileNotFoundError("OmniQ debugger not found. Please build it first.")
     
-    def show(self, circuit=None, noise_model=None):
+    def show(self, circuit=None, noise_model=None, view_mode=None):
         """Show the quantum debugger GUI (like df.head())"""
         if circuit is not None:
             self.circuit = circuit
@@ -44,15 +44,21 @@ class QuantumDebugger:
         
         if noise_model:
             data["noise_model"] = noise_model.to_dict()
+
+        if view_mode:
+            data["initial_view"] = view_mode
             
         with open(temp_path, 'w') as f:
             json.dump(data, f, indent=2)
         
         try:
             # Pass the temp file path as an argument
-            subprocess.Popen([self.debugger_path, temp_path], 
-                           stdout=subprocess.DEVNULL, 
-                           stderr=subprocess.DEVNULL)
+            print(f"🐛 Launching debugger from: {self.debugger_path}")
+            print(f"📂 Loading circuit file: {temp_path}")
+            
+            # Using Popen without redirecting output so the user can see errors
+            subprocess.Popen([self.debugger_path, temp_path])
+            
             print(f"🚀 OmniQ Quantum Debugger opened with circuit and noise model!")
             print("   • Use the GUI to inspect quantum states")
             print("   • Drag and drop gates to build circuits")
@@ -61,19 +67,19 @@ class QuantumDebugger:
             print(f"❌ Failed to open debugger: {e}")
             print("💡 Try building the debugger first: cd omniq-debugger && ./build.sh")
     
-    def debug(self, circuit=None):
+    def debug(self, circuit=None, view_mode=None):
         """Alias for show() - debug the circuit"""
-        return self.show(circuit)
+        return self.show(circuit, view_mode=view_mode)
     
-    def inspect(self, circuit=None):
+    def inspect(self, circuit=None, view_mode=None):
         """Another alias for show()"""
-        return self.show(circuit)
-
+        return self.show(circuit, view_mode=view_mode)
+    
 # Convenience function
-def show_debugger(circuit=None, noise_model=None):
+def show_debugger(circuit=None, noise_model=None, view_mode=None):
     """Quick function to show debugger (like df.head())"""
     debugger = QuantumDebugger(circuit)
-    return debugger.show(noise_model=noise_model)
+    return debugger.show(noise_model=noise_model, view_mode=view_mode)
 
 # Add debugger methods to Circuit class
 def add_debugger_to_circuit():
@@ -81,14 +87,14 @@ def add_debugger_to_circuit():
     try:
         from .circuit import Circuit
         
-        def debug(self):
+        def debug(self, view_mode=None):
             """Show debugger for this circuit"""
             debugger = QuantumDebugger(self)
-            return debugger.show()
+            return debugger.show(view_mode=view_mode)
         
-        def show(self):
+        def show(self, view_mode=None):
             """Show debugger for this circuit"""
-            return self.debug()
+            return self.debug(view_mode=view_mode)
         
         Circuit.debug = debug
         Circuit.show = show

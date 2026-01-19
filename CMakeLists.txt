@@ -17,6 +17,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Find required packages
 find_package(Threads REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/libomniq-core/include)
@@ -26,6 +27,8 @@ set(CORE_SOURCES
     libomniq-core/src/common/Statevector.cpp
     libomniq-core/src/common/DensityMatrix.cpp
     libomniq-core/src/common/Circuit.cpp
+    libomniq-core/src/common/Operators.cpp
+    libomniq-core/src/common/QuantumStates.cpp
     libomniq-core/src/modules/algorithms/Grovers.cpp
     libomniq-core/src/modules/algorithms/QPE.cpp
 )
@@ -45,26 +48,30 @@ target_compile_options(omniq-core PRIVATE
 )
 
 # Link libraries
-target_link_libraries(omniq-core PUBLIC Threads::Threads)
+target_link_libraries(omniq-core PUBLIC Threads::Threads Eigen3::Eigen)
 
 # Create the test executables
-# Find Google Test
-find_package(GTest REQUIRED)
+option(BUILD_TESTING "Build tests" OFF)
 
-# Test executables
-add_executable(test_core tests/test_core.cpp)
-target_link_libraries(test_core PRIVATE omniq-core GTest::gtest GTest::gtest_main GTest::gmock)
+if(BUILD_TESTING)
+    # Find Google Test
+    find_package(GTest REQUIRED)
 
-add_executable(test_algorithms test_algorithms.cpp)
-target_link_libraries(test_algorithms PRIVATE omniq-core GTest::gtest GTest::gtest_main)
+    # Test executables
+    add_executable(test_core tests/test_core.cpp)
+    target_link_libraries(test_core PRIVATE omniq-core GTest::gtest GTest::gtest_main GTest::gmock)
 
-# Enable testing
-enable_testing()
-add_test(NAME CoreTest COMMAND test_core)
-add_test(NAME AlgorithmsTest COMMAND test_algorithms)
+    add_executable(test_algorithms test_algorithms.cpp)
+    target_link_libraries(test_algorithms PRIVATE omniq-core GTest::gtest GTest::gtest_main)
+
+    # Enable testing
+    enable_testing()
+    add_test(NAME CoreTest COMMAND test_core)
+    add_test(NAME AlgorithmsTest COMMAND test_algorithms)
+endif()
 
 # Create the main executable
-add_executable(omniq main)
+add_executable(omniq main.cpp)
 target_link_libraries(omniq PRIVATE omniq-core)
 
 # Install targets

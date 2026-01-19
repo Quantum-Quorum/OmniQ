@@ -67,8 +67,19 @@ target_link_libraries(omniq-core PUBLIC Threads::Threads Eigen3::Eigen)
 option(BUILD_TESTING "Build tests" OFF)
 
 if(BUILD_TESTING)
-    # Find Google Test
-    find_package(GTest REQUIRED)
+    # Find Google Test or fetch it
+    find_package(GTest QUIET)
+    if(NOT GTest_FOUND)
+        message(STATUS "GTest not found. Fetching from source...")
+        include(FetchContent)
+        FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG v1.14.0
+        )
+        FetchContent_MakeAvailable(googletest)
+        include(GoogleTest)
+    endif()
 
     # Test executables
     add_executable(test_core tests/test_core.cpp)

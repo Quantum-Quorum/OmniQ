@@ -45,18 +45,20 @@ bool CoreInterface::createCircuit(int numQubits, int numClassicalBits) {
 
 bool CoreInterface::loadCircuit(const QString &filename) {
   QFile file(filename);
-  if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+  if (!file.open(QIODevice::ReadOnly)) {
     lastError_ = QString("Cannot open file: %1").arg(filename);
     emit errorOccurred(lastError_);
     return false;
   }
 
-  QTextStream in(&file);
-  QString content = in.readAll();
-  file.close();
+  QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+  if (doc.isNull() || !doc.isObject()) {
+    lastError_ = "Invalid JSON circuit file";
+    emit errorOccurred(lastError_);
+    return false;
+  }
 
-  // Create circuit with requested number of qubits
-  return createCircuit(2); // Still 2 for now, but should handle parsing later
+  return importCircuit(doc.object());
 }
 
 bool CoreInterface::saveCircuit(const QString &filename) {
@@ -418,7 +420,44 @@ bool CoreInterface::importCircuit(const QJsonObject &circuitData) {
   }
 
   int numQubits = circuitData["num_qubits"].toInt();
-  return createCircuit(numQubits, 0);
+  if (!createCircuit(numQubits)) {
+    return false;
+  }
+
+  // Clear the dummy gates from createCircuit
+  circuit_->reset();
+
+  if (circuitData.contains("gates")) {
+    QJsonArray gates = circuitData["gates"].toArray();
+    for (const auto &gateVal : gates) {
+      QJsonObject gateObj = gateVal.toObject();
+      QString typeStr = gateObj["type"].toString();
+      int qubit = gateObj["qubit"].toInt();
+      double param = gateObj["parameter"].toDouble(0.0);
+
+      try {
+        omniq::GateType type = stringToGateType(typeStr);
+        if (type == omniq::GateType::CNOT || type == omniq::GateType::SWAP) {
+          int target = gateObj["target"].toInt(qubit + 1);
+          circuit_->addGate(type, qubit, target);
+        } else {
+          circuit_->addGate(type, qubit, param);
+        }
+      } catch (...) {
+        // Skip unknown gates for now
+      }
+    }
+  }
+
+  totalSteps_ = circuit_->getTotalSteps();
+  currentStep_ = 0;
+
+  // Initial execution to step 0 (identity)
+  updateQubitStates();
+
+  emit circuitChanged();
+  emit stateChanged();
+  return true;
 }
 
 QString CoreInterface::getLastError() const { return lastError_; }

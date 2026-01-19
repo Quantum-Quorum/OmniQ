@@ -44,6 +44,14 @@ MainWindow::MainWindow(QWidget *parent)
   setupStatusBar();
   loadSettings();
 
+  // Connect CoreInterface signals to UI
+  connect(coreInterface, &CoreInterface::stateChanged, this,
+          &MainWindow::updateStateDisplays);
+  connect(coreInterface, &CoreInterface::circuitChanged, this,
+          &MainWindow::syncCircuitWithBackend);
+  connect(coreInterface, &CoreInterface::errorOccurred, this,
+          [this](const QString &err) { statusBar()->showMessage(err); });
+
   updateTimer = new QTimer(this);
   connect(updateTimer, &QTimer::timeout, this, &MainWindow::updateStatus);
   updateTimer->start(100);
@@ -243,34 +251,57 @@ void MainWindow::openCircuit() {
 }
 
 void MainWindow::loadCircuit(const QString &fileName) {
-  QFile file(fileName);
-  if (!file.open(QIODevice::ReadOnly)) {
-    statusBar()->showMessage("Failed to open file: " + fileName);
+  if (coreInterface->loadCircuit(fileName)) {
+    coreInterface->executeFull(); // Run all gates to get the final state
+    syncCircuitWithBackend();
+    statusBar()->showMessage("Loaded circuit: " + fileName);
+    printf("Circuit loaded and executed. State vector size: %d\n",
+           coreInterface->getStateVectorComplex().size());
+  }
+}
+
+void MainWindow::updateStateDisplays() {
+  if (!coreInterface || !stateViewer || !qubitViewer || !blochSphereWidget)
     return;
+
+  // Get current state vector
+  QVector<std::complex<double>> state = coreInterface->getStateVectorComplex();
+  if (state.isEmpty())
+    return;
+
+  // Update State Viewer
+  stateViewer->updateStateVector(state);
+
+  // Update Density Matrix if applicable
+  stateViewer->updateDensityMatrix(coreInterface->getDensityMatrixComplex());
+
+  // Update Qubit Viewer for the selected qubit
+  QVector<double> qstate = coreInterface->getQubitState(0); // Default to 0
+  if (!qstate.isEmpty()) {
+    qubitViewer->updateQubitInfo(0, qstate[0], qstate[1], qstate[2], qstate[4],
+                                 qstate[6], qstate[7]);
   }
 
-  QByteArray data = file.readAll();
-  QJsonDocument doc = QJsonDocument::fromJson(data);
-  if (!doc.isObject()) {
-    statusBar()->showMessage("Invalid circuit file format");
-    return;
-  }
+  // Update Bloch Sphere for the selected qubit
+  std::complex<double> alpha(qstate[2], qstate[3]);
+  std::complex<double> beta(qstate[4], qstate[5]);
+  blochSphereWidget->setQuantumState(alpha, beta);
+}
 
-  QJsonObject obj = doc.object();
-  int numQubits = obj["num_qubits"].toInt(1);
-  circuitView->setNumQubits(numQubits);
+void MainWindow::syncCircuitWithBackend() {
+  if (!coreInterface || !circuitView)
+    return;
+
+  // Update visual circuit based on backend
   circuitView->clear();
+  int numQubits = coreInterface->getStateVectorComplex().isEmpty()
+                      ? 2
+                      : static_cast<int>(std::log2(
+                            coreInterface->getStateVectorComplex().size()));
+  circuitView->setNumQubits(numQubits);
 
-  QJsonArray gates = obj["gates"].toArray();
-  for (const auto &gateVal : gates) {
-    QJsonObject gateObj = gateVal.toObject();
-    QString type = gateObj["type"].toString();
-    int qubit = gateObj["qubit"].toInt();
-    int step = gateObj["step"].toInt();
-    circuitView->addGate(step, qubit, type);
-  }
-
-  statusBar()->showMessage("Loaded circuit: " + fileName);
+  // Refresh the display
+  updateStateDisplays();
 }
 
 void MainWindow::saveCircuit() {

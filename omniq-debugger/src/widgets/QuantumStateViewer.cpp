@@ -524,7 +524,7 @@ void QuantumStateViewer::onUpdateAnimation() {
     QVector<std::complex<double>> animatedState = stateVector_;
     for (int i = 0; i < animatedState.size(); ++i) {
       double phase =
-          std::arg(animatedState[i]) + 0.05 * std::sin(animationPhase_);
+          std::arg(animatedState[i]) + 0.3 * std::sin(animationPhase_);
       double mag = std::abs(animatedState[i]);
       animatedState[i] =
           std::complex<double>(mag * std::cos(phase), mag * std::sin(phase));

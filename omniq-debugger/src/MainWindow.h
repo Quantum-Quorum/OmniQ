@@ -38,6 +38,8 @@ public:
   ~MainWindow();
 
   void loadCircuit(const QString &fileName);
+  void updateStateDisplays();
+  void syncCircuitWithBackend();
 
 private slots:
   void newCircuit();

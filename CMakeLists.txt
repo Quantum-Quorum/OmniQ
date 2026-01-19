@@ -17,7 +17,20 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
 # Find required packages
 find_package(Threads REQUIRED)
-find_package(Eigen3 REQUIRED)
+
+# Find Eigen3 or fetch it
+find_package(Eigen3 QUIET)
+if(NOT Eigen3_FOUND)
+    message(STATUS "Eigen3 not found. Fetching from source...")
+    include(FetchContent)
+    FetchContent_Declare(
+        Eigen3
+        GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+        GIT_TAG 3.4.0
+        GIT_SHALLOW TRUE
+    )
+    FetchContent_MakeAvailable(Eigen3)
+endif()
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/libomniq-core/include)

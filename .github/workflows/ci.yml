@@ -17,7 +17,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake g++ libgtest-dev
+          sudo apt-get install -y cmake g++ libgtest-dev libeigen3-dev
 
       - name: Configure CMake (Core)
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
@@ -52,6 +52,10 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: brew install eigen
+
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v3

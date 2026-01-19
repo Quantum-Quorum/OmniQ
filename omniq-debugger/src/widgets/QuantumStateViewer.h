@@ -76,6 +76,7 @@ private slots:
   void onPerformTomography();
   void onExportState();
   void onAnimateState();
+  void onUpdateAnimation();
 
 private:
   void setupUI();

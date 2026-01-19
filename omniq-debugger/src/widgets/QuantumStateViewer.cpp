@@ -217,7 +217,7 @@ QuantumStateViewer::QuantumStateViewer(QWidget *parent)
   // Setup animation timer
   animationTimer_ = new QTimer(this);
   connect(animationTimer_, &QTimer::timeout, this,
-          &QuantumStateViewer::onAnimateState);
+          &QuantumStateViewer::onUpdateAnimation);
 }
 
 QuantumStateViewer::~QuantumStateViewer() {}
@@ -514,6 +514,23 @@ void QuantumStateViewer::onAnimateState() {
   } else {
     animationTimer_->stop();
     animateButton_->setText("Animate");
+  }
+}
+
+void QuantumStateViewer::onUpdateAnimation() {
+  animationPhase_ += 0.1;
+  // Shift state vector slightly for a "living" visualization effect
+  if (!stateVector_.isEmpty() && isAnimating_) {
+    QVector<std::complex<double>> animatedState = stateVector_;
+    for (int i = 0; i < animatedState.size(); ++i) {
+      double phase =
+          std::arg(animatedState[i]) + 0.05 * std::sin(animationPhase_);
+      double mag = std::abs(animatedState[i]);
+      animatedState[i] =
+          std::complex<double>(mag * std::cos(phase), mag * std::sin(phase));
+    }
+    densityMatrixWidget_->setStateVector(animatedState);
+    hilbertSpace_->setStateVector(animatedState);
   }
 }
 

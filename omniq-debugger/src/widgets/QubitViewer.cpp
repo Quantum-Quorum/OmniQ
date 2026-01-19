@@ -264,7 +264,8 @@ void QubitViewer::updateMeasurementStats() {
 
     int count0 = results.count(0);
     int count1 = results.count(1);
-    double prob0 = static_cast<double>(count0) / results.size();
+    double prob0 =
+        results.isEmpty() ? 0.0 : static_cast<double>(count0) / results.size();
 
     int row = measurementTable_->rowCount();
     measurementTable_->insertRow(row);

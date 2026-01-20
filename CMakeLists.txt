@@ -54,7 +54,8 @@ target_include_directories(omniq-core PUBLIC
 )
 
 # Set compile definitions
-target_compile_definitions(omniq-core PRIVATE _USE_MATH_DEFINES)
+# Set compile definitions
+target_compile_definitions(omniq-core PUBLIC _USE_MATH_DEFINES NOMINMAX)
 
 # Set compiler flags
 target_compile_options(omniq-core PRIVATE

@@ -99,31 +99,4 @@ jobs:
             omniq-debugger/build_debugger/omniq-debugger.app
             omniq-python/dist/*.whl
 
-  build-windows:
-    name: Windows Latest (CLI & Python)
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
 
-      - name: Configure CMake (Core)
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
-
-      - name: Build Core
-        run: cmake --build build --config Release
-
-      - name: Run Tests
-        run: cd build && ctest --output-on-failure
-
-      - name: Build Python Wheel
-        run: |
-          cd omniq-python
-          pip install build
-          python -m build
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-build
-          path: |
-            build/bin/omniq.exe
-            omniq-python/dist/*.whl

@@ -1,3 +1,5 @@
+<img width="640" height="229" alt="image" src="https://github.com/user-attachments/assets/bff330e7-a8fa-4703-bb5a-ce065ebf2464" />
+
 **OmniQ: Seamless Quantum Programming Across Python and C.**
 
 OmniQ is a modern, open-source software library designed for quantum computing research and development. Its primary goal is to provide a unified and intuitive interface for constructing, simulating, and executing quantum algorithms, accessible from Python and high-performance C applications via a robust C++ core engine.

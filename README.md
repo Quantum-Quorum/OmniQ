@@ -1,4 +1,4 @@
-<img width="120" height="80" alt="image" src="https://github.com/user-attachments/assets/bff330e7-a8fa-4703-bb5a-ce065ebf2464" style="color:white"/>
+<img width="120" height="80" alt="image" src="https://github.com/user-attachments/assets/bff330e7-a8fa-4703-bb5a-ce065ebf2464" style="background-color:white"/>
 
 **OmniQ: Seamless Quantum Programming Across Python and C.**
 

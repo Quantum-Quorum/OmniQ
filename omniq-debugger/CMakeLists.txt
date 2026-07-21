@@ -31,7 +31,33 @@ add_executable(omniq-debugger MACOSX_BUNDLE ${DEBUGGER_SOURCES})
 
 
 find_package(Eigen3 REQUIRED)
-find_package(OpenGL REQUIRED)
+
+if(APPLE)
+    add_compile_definitions(GL_SILENCE_DEPRECATION)
+    set(OPENGL_LIBRARIES "-framework OpenGL")
+    
+    # Create dummy AGL Mach-O dylib to satisfy legacy Qt6 macOS framework dependency
+    set(DUMMY_AGL_DIR "${CMAKE_BINARY_DIR}/dummy_frameworks")
+    file(MAKE_DIRECTORY "${DUMMY_AGL_DIR}/AGL.framework")
+    file(WRITE "${CMAKE_BINARY_DIR}/dummy_agl.c" "void dummy_agl(void) {}\n")
+    execute_process(COMMAND clang -dynamiclib "${CMAKE_BINARY_DIR}/dummy_agl.c" -o "${DUMMY_AGL_DIR}/AGL.framework/AGL")
+    target_link_options(omniq-debugger PRIVATE "-F${DUMMY_AGL_DIR}")
+
+    # Strip AGL from Qt6 targets if present
+    foreach(qt_tgt Qt6::Gui Qt6::OpenGL Qt6::OpenGLWidgets)
+        if(TARGET ${qt_tgt})
+            get_target_property(libs ${qt_tgt} INTERFACE_LINK_LIBRARIES)
+            if(libs)
+                string(REPLACE "-framework AGL" "" libs "${libs}")
+                string(REPLACE "/System/Library/Frameworks/AGL.framework" "" libs "${libs}")
+                set_target_properties(${qt_tgt} PROPERTIES INTERFACE_LINK_LIBRARIES "${libs}")
+            endif()
+        endif()
+    endforeach()
+else()
+    find_package(OpenGL REQUIRED)
+    set(OPENGL_LIBRARIES OpenGL::GL)
+endif()
 
 target_link_libraries(omniq-debugger PRIVATE
     Qt6::Core
@@ -39,7 +65,7 @@ target_link_libraries(omniq-debugger PRIVATE
     Qt6::OpenGL
     Qt6::OpenGLWidgets
     Eigen3::Eigen
-    OpenGL::GL
+    ${OPENGL_LIBRARIES}
     # OmniQ::omniq-core  # commented out just for now
 )
 

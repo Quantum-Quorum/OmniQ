@@ -538,7 +538,7 @@ MatrixXcd Circuit::createTwoQubitGate(const Matrix4cd &gate, int qubit1,
   return fullMatrix;
 }
 
-void Circuit::validateGate(const Gate &gate) {
+void Circuit::validateGate(const Gate &gate) const {
   // Validate target qubits
   for (int qubit : gate.targetQubits) {
     validateQubitIndex(qubit);
@@ -563,13 +563,13 @@ void Circuit::validateGate(const Gate &gate) {
   }
 }
 
-void Circuit::validateQubitIndex(int qubit) {
+void Circuit::validateQubitIndex(int qubit) const {
   if (qubit < 0 || qubit >= numQubits_) {
     throw std::out_of_range("Qubit index out of range");
   }
 }
 
-void Circuit::validateClassicalBitIndex(int bit) {
+void Circuit::validateClassicalBitIndex(int bit) const {
   if (bit < 0 || bit >= numClassicalBits_) {
     throw std::out_of_range("Classical bit index out of range");
   }
@@ -669,6 +669,38 @@ void Circuit::applyControlledPhase(int controlQubit, int targetQubit,
       stateVector_(i) *= phase;
     }
   }
+}
+
+double Circuit::getQubitProbability(int qubit, int value) const {
+  validateQubitIndex(qubit);
+  if (value != 0 && value != 1) {
+    throw std::invalid_argument("Qubit value must be 0 or 1");
+  }
+
+  double prob = 0.0;
+  int dim = static_cast<int>(stateVector_.size());
+  int qubitMask = 1 << qubit;
+
+  for (int i = 0; i < dim; ++i) {
+    if (((i & qubitMask) >> qubit) == value) {
+      prob += std::norm(stateVector_(i));
+    }
+  }
+  return prob;
+}
+
+double Circuit::getQubitExpectation(int qubit, const std::string &observable) const {
+  validateQubitIndex(qubit);
+  double prob0 = getQubitProbability(qubit, 0);
+  double prob1 = getQubitProbability(qubit, 1);
+  if (observable == "Z") {
+    return prob0 - prob1;
+  }
+  return prob0 - prob1;
+}
+
+MatrixXcd Circuit::getDensityMatrix() const {
+  return stateVector_ * stateVector_.adjoint();
 }
 
 } // namespace omniq

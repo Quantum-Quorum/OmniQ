@@ -23,6 +23,11 @@ class NoiseModel:
         self.channels.append(('RELAXATION', t1, t2))
         return self
     
+    def add_dual_rail_magnon_loss(self, gamma):
+        """Add amplitude damping channel bleeding into |0,0> vacuum state"""
+        self.channels.append(('DUAL_RAIL_MAGNON_LOSS', gamma))
+        return self
+    
     def to_dict(self):
         return {
             "name": self.name,

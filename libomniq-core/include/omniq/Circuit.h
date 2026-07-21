@@ -49,9 +49,9 @@ private:
   int currentStep_;
 
   // Helper methods
-  void validateGate(const Gate &gate);
-  void validateQubitIndex(int qubit);
-  void validateClassicalBitIndex(int bit);
+  void validateGate(const Gate &gate) const;
+  void validateQubitIndex(int qubit) const;
+  void validateClassicalBitIndex(int bit) const;
   MatrixXcd createSingleQubitGate(const Matrix2cd &gate, int qubit);
   MatrixXcd createTwoQubitGate(const Matrix4cd &gate, int qubit1, int qubit2);
   std::string gateToString(const Gate &gate) const;

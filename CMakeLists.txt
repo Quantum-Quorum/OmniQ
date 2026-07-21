@@ -41,12 +41,14 @@ include_directories(${CMAKE_SOURCE_DIR}/libomniq-core/include)
 # Source files for the core library
 set(CORE_SOURCES
     libomniq-core/src/common/Statevector.cpp
+    libomniq-core/src/common/QuditStatevector.cpp
     libomniq-core/src/common/DensityMatrix.cpp
     libomniq-core/src/common/Circuit.cpp
     libomniq-core/src/common/Operators.cpp
     libomniq-core/src/common/QuantumStates.cpp
     libomniq-core/src/modules/algorithms/Grovers.cpp
     libomniq-core/src/modules/algorithms/QPE.cpp
+    libomniq-core/src/modules/noise/DualRailDampingChannel.cpp
 )
 
 # Create the core library

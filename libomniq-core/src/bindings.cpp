@@ -4,6 +4,8 @@
 #include "omniq/QPE.h"
 #include "omniq/QuantumStates.h"
 #include "omniq/Statevector.h"
+#include "omniq/QuditStatevector.h"
+#include "omniq/Noise/DualRailDampingChannel.h"
 #include <pybind11/eigen.h>
 #include <pybind11/functional.h> // For std::function bindings
 #include <pybind11/pybind11.h>
@@ -104,6 +106,38 @@ PYBIND11_MODULE(_omniq_core, m) {
       .def("partial_trace", &Statevector::partialTrace)
       .def("get_qubit_probability", &Statevector::getQubitProbability);
 
+  // QuditStatevector Class
+  py::class_<QuditStatevector>(m, "QuditStatevector")
+      .def(py::init<int, int>(), py::arg("num_qudits"), py::arg("dimension"))
+      .def(py::init<int, int, const VectorXcd &>(), py::arg("num_qudits"), py::arg("dimension"), py::arg("amplitudes"))
+      .def("apply_aharonov_casher_rz", &QuditStatevector::applyAharonovCasherRZ, py::arg("qudit"), py::arg("theta"))
+      .def("apply_csum", &QuditStatevector::applyCSUM, py::arg("control_qudit"), py::arg("target_qudit"))
+      .def("apply_controlled_phase", &QuditStatevector::applyControlledPhase, py::arg("control_qudit"), py::arg("target_qudit"), py::arg("phase"))
+      .def("apply_custom_single_op", &QuditStatevector::applyCustomSingleQuditOp, py::arg("qudit"), py::arg("op"))
+      .def("get_qudit_state_probability", &QuditStatevector::getQuditStateProbability, py::arg("qudit"), py::arg("state_level"))
+      .def("measure", &QuditStatevector::measure, py::arg("qudit"))
+      .def("normalize", &QuditStatevector::normalize)
+      .def("get_norm", &QuditStatevector::getNorm)
+      .def("to_string", &QuditStatevector::toString)
+      .def("get_num_qudits", &QuditStatevector::getNumQudits)
+      .def("get_dimension", &QuditStatevector::getDimension)
+      .def("get_total_dimension", &QuditStatevector::getTotalDimension)
+      .def("get_state_vector",
+           static_cast<const VectorXcd &(QuditStatevector::*)() const>(
+               &QuditStatevector::getStateVector),
+           py::return_value_policy::reference_internal);
+
+  // DualRailDampingChannel Class
+  py::class_<omniq::noise::DualRailDampingChannel>(m, "DualRailDampingChannel")
+      .def(py::init<double>(), py::arg("gamma"))
+      .def_static("from_t1", &omniq::noise::DualRailDampingChannel::fromT1, py::arg("t1"), py::arg("gate_time"))
+      .def("apply", &omniq::noise::DualRailDampingChannel::apply)
+      .def("get_kraus_operators", &omniq::noise::DualRailDampingChannel::getKrausOperators)
+      .def("get_name", &omniq::noise::DualRailDampingChannel::getName)
+      .def("get_description", &omniq::noise::DualRailDampingChannel::getDescription)
+      .def("get_gamma", &omniq::noise::DualRailDampingChannel::getGamma)
+      .def("set_gamma", &omniq::noise::DualRailDampingChannel::setGamma);
+
   // DensityMatrix Class
   py::class_<DensityMatrix>(m, "DensityMatrix")
       .def(py::init<int>())
@@ -125,7 +159,7 @@ PYBIND11_MODULE(_omniq_core, m) {
   // Algorithms - QPE
   py::class_<QPE>(m, "QPE")
       .def(py::init<int, int, UnitaryOperator>())
-      .def("execute", &QPE::execute, py::arg("initial_state") = Statevector(0))
+      .def("execute", &QPE::execute, py::arg("initial_state") = Statevector(1))
       .def("execute_with_measurements", &QPE::execute_with_measurements,
            py::arg("num_shots") = 1000);
 
@@ -134,7 +168,7 @@ PYBIND11_MODULE(_omniq_core, m) {
       .def(py::init<int, OracleFunction, int>(), py::arg("num_qubits"),
            py::arg("oracle"), py::arg("num_solutions") = 1)
       .def("execute", &GroversAlgorithm::execute,
-           py::arg("initial_state") = Statevector(0))
+           py::arg("initial_state") = Statevector(1))
       .def("execute_with_measurements",
            &GroversAlgorithm::execute_with_measurements,
            py::arg("num_shots") = 1000)

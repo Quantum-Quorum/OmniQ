@@ -46,11 +46,26 @@ def version_info():
 DEFAULT_DEVICE = 'default.qubit'
 SUPPORTED_DEVICES = ['default.qubit', 'lightning.qubit', 'ibmq.manila', 'ionq.simulator']
 
+from .magnon_logical import MagnonicGate, DualRailCompiler, create_dual_rail_grover
+
+try:
+    from _omniq_core import QuditStatevector, DualRailDampingChannel
+except ImportError:
+    QuditStatevector = None
+    DualRailDampingChannel = None
+
 # Import all public API
 __all__ = [
     # Core classes
     'Circuit',
     'NoiseModel',
+    'QuditStatevector',
+    'DualRailDampingChannel',
+    
+    # Magnon Dual-Rail Logical
+    'MagnonicGate',
+    'DualRailCompiler',
+    'create_dual_rail_grover',
     
     # Debugger
     'show_debugger',
@@ -60,3 +75,4 @@ __all__ = [
     'version_info',
     '__version__'
 ]
+

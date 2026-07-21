@@ -37,6 +37,7 @@ endif()
 set(OMNIQ_CORE_SOURCES
     src/common/Circuit.cpp
     src/common/Statevector.cpp
+    src/common/QuditStatevector.cpp
     src/common/DensityMatrix.cpp
     src/common/Operators.cpp
     src/common/QuantumStates.cpp
@@ -59,6 +60,7 @@ set(OMNIQ_CORE_SOURCES
     src/modules/noise/DepolarizingChannel.cpp
     src/modules/noise/AmplitudeDampingChannel.cpp
     src/modules/noise/PhaseDampingChannel.cpp
+    src/modules/noise/DualRailDampingChannel.cpp
     src/modules/noise/NoiseModel.cpp
     src/simulators/clifford/CliffordSimulator.cpp
     src/common/Spectral.cpp

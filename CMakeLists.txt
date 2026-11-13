@@ -107,6 +107,9 @@ endif()
 add_executable(omniq main.cpp)
 target_link_libraries(omniq PRIVATE omniq-core)
 
+# OmniQ-QOS: Quantum Operating System Subsystem (drivers/accel/qpu, QMMU, omniqd, libomniq-qpu)
+add_subdirectory(omniq-qos)
+
 # Install targets
 install(TARGETS omniq-core
     EXPORT OmniQTargets

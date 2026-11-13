@@ -31,7 +31,11 @@ public:
   explicit QubitViewer(QWidget *parent = nullptr);
   ~QubitViewer();
 
+signals:
+  void qubitSelectionChanged(int qubit);
+
 public slots:
+  void setSelectedQubit(int qubit);
   void updateQubitInfo(int qubit, double prob0, double prob1,
                        double alpha = 1.0, double beta = 0.0,
                        double theta = 0.0, double phi = 0.0);

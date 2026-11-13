@@ -266,13 +266,15 @@ int omniq_state_measure(omniq_state_t* state, int qubit) {
 }
 
 double omniq_state_get_amplitude_real(omniq_state_t* state, int index) {
-    if (!state || index < 0 || index >= (1 << state->num_qubits)) {
+    if (!state || !state->state || index < 0 || index >= (1 << state->num_qubits)) {
         return 0.0;
     }
     
     try {
-        // This would need to be implemented based on the actual state representation
-        // For now, return a placeholder
+        auto sv = state->state->getStateVector();
+        if (index < sv.size()) {
+            return sv(index).real();
+        }
         return 0.0;
     } catch (const std::exception& e) {
         std::cerr << "Error getting amplitude real part: " << e.what() << std::endl;
@@ -281,13 +283,15 @@ double omniq_state_get_amplitude_real(omniq_state_t* state, int index) {
 }
 
 double omniq_state_get_amplitude_imag(omniq_state_t* state, int index) {
-    if (!state || index < 0 || index >= (1 << state->num_qubits)) {
+    if (!state || !state->state || index < 0 || index >= (1 << state->num_qubits)) {
         return 0.0;
     }
     
     try {
-        // This would need to be implemented based on the actual state representation
-        // For now, return a placeholder
+        auto sv = state->state->getStateVector();
+        if (index < sv.size()) {
+            return sv(index).imag();
+        }
         return 0.0;
     } catch (const std::exception& e) {
         std::cerr << "Error getting amplitude imaginary part: " << e.what() << std::endl;

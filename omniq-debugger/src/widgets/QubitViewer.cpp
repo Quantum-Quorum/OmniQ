@@ -61,6 +61,7 @@ void QubitViewer::setupUI() {
   blochGroup_ = new QGroupBox("Bloch Sphere Visualization", this);
   QVBoxLayout *blochLayout = new QVBoxLayout(blochGroup_);
   blochSphere_ = new BlochSphereWidget(this);
+  blochSphere_->setMaximumHeight(200);
   blochLayout->addWidget(blochSphere_);
   mainLayout->addWidget(blochGroup_);
 
@@ -102,6 +103,7 @@ void QubitViewer::setupUI() {
   measurementTable_->setHorizontalHeaderLabels(
       {"Basis", "|0⟩ Count", "|1⟩ Count", "Probability"});
   measurementTable_->horizontalHeader()->setStretchLastSection(true);
+  measurementTable_->setMaximumHeight(120);
   measureLayout->addWidget(measurementTable_);
 
   mainLayout->addWidget(measurementGroup_);
@@ -116,6 +118,7 @@ void QubitViewer::setupUI() {
   qubitTable_->setHorizontalHeaderLabels(
       {"Qubit", "P(|0⟩)", "P(|1⟩)", "Phase"});
   qubitTable_->horizontalHeader()->setStretchLastSection(true);
+  qubitTable_->setMaximumHeight(120);
   statsLayout->addWidget(qubitTable_);
 
   // Expectation values table
@@ -123,6 +126,7 @@ void QubitViewer::setupUI() {
   expectationTable_->setColumnCount(4);
   expectationTable_->setHorizontalHeaderLabels({"Qubit", "⟨X⟩", "⟨Y⟩", "⟨Z⟩"});
   expectationTable_->horizontalHeader()->setStretchLastSection(true);
+  expectationTable_->setMaximumHeight(120);
   statsLayout->addWidget(expectationTable_);
 
   // Additional properties
@@ -199,9 +203,21 @@ void QubitViewer::resetQubitData() {
                                 std::complex<double>(0.0, 0.0));
 }
 
+void QubitViewer::setSelectedQubit(int qubit) {
+  if (qubitSelector_ && qubitSelector_->currentIndex() != qubit &&
+      qubit >= 0 && qubit < qubitSelector_->count()) {
+    qubitSelector_->blockSignals(true);
+    qubitSelector_->setCurrentIndex(qubit);
+    qubitSelector_->blockSignals(false);
+    currentQubit_ = qubit;
+    updateBlochSphere();
+  }
+}
+
 void QubitViewer::onQubitSelected(int qubit) {
   currentQubit_ = qubit;
   updateBlochSphere();
+  emit qubitSelectionChanged(qubit);
 }
 
 void QubitViewer::onMeasurementBasisChanged(const QString &basis) {

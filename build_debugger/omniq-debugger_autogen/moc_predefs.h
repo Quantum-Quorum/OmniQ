@@ -1,4 +1,5 @@
 #define ARCHITECTURE_ID "arm64"
+#define GL_SILENCE_DEPRECATION 1
 #define QT_CORE_LIB 1
 #define QT_GUI_LIB 1
 #define QT_NO_DEBUG 1
@@ -21,6 +22,7 @@
 #define TARGET_OS_OSX 1
 #define TARGET_OS_SIMULATOR 0
 #define TARGET_OS_TV 0
+#define TARGET_OS_UEFI 0
 #define TARGET_OS_UIKITFORMAC 0
 #define TARGET_OS_UNIX 0
 #define TARGET_OS_VISION 0
@@ -28,6 +30,7 @@
 #define TARGET_OS_WIN32 0
 #define TARGET_OS_WINDOWS 0
 #define TARGET_OS_XR 0
+#define _HAS_BUILTIN_AVAILABLE_FEATS 1
 #define _LP64 1
 #define __AARCH64EL__ 1
 #define __AARCH64_CMODEL_SMALL__ 1
@@ -36,9 +39,11 @@
 #define __APPLE__ 1
 #define __ARM64_ARCH_8__ 1
 #define __ARM_64BIT_STATE 1
-#define __ARM_ACLE 200
+#define __ARM_ACLE 202420
+#define __ARM_ACLE_VERSION(year,quarter,patch) (100 * (year) + 10 * (quarter) + (patch))
 #define __ARM_ALIGN_MAX_STACK_PWR 4
 #define __ARM_ARCH 8
+#define __ARM_ARCH_8_2__ 1
 #define __ARM_ARCH_8_3__ 1
 #define __ARM_ARCH_8_4__ 1
 #define __ARM_ARCH_8_5__ 1
@@ -75,6 +80,7 @@
 #define __ARM_FP16_FORMAT_IEEE 1
 #define __ARM_NEON 1
 #define __ARM_NEON_FP 0xE
+#define __ARM_NEON_SVE_BRIDGE 1
 #define __ARM_NEON__ 1
 #define __ARM_PCS_AAPCS64 1
 #define __ARM_SIZEOF_MINIMAL_ENUM 4
@@ -90,7 +96,7 @@
 #define __BIGGEST_ALIGNMENT__ 8
 #define __BITINT_MAXWIDTH__ 128
 #define __BLOCKS__ 1
-#define __BOOL_WIDTH__ 8
+#define __BOOL_WIDTH__ 1
 #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 #define __CHAR16_TYPE__ unsigned short
 #define __CHAR32_TYPE__ unsigned int
@@ -124,8 +130,8 @@
 #define __DECIMAL_DIG__ __LDBL_DECIMAL_DIG__
 #define __DEPRECATED 1
 #define __DYNAMIC__ 1
-#define __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ 150500
-#define __ENVIRONMENT_OS_VERSION_MIN_REQUIRED__ 150500
+#define __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ 260000
+#define __ENVIRONMENT_OS_VERSION_MIN_REQUIRED__ 260000
 #define __EXCEPTIONS 1
 #define __FINITE_MATH_ONLY__ 0
 #define __FLT16_DECIMAL_DIG__ 5
@@ -171,6 +177,7 @@
 #define __FPCLASS_SNAN 0x0001
 #define __FP_FAST_FMA 1
 #define __FP_FAST_FMAF 1
+#define __FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL 202430
 #define __GCC_ASM_FLAG_OUTPUTS__ 1
 #define __GCC_ATOMIC_BOOL_LOCK_FREE 2
 #define __GCC_ATOMIC_CHAR16_T_LOCK_FREE 2
@@ -184,7 +191,7 @@
 #define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 #define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
 #define __GCC_CONSTRUCTIVE_SIZE 64
-#define __GCC_DESTRUCTIVE_SIZE 64
+#define __GCC_DESTRUCTIVE_SIZE 256
 #define __GCC_HAVE_DWARF2_CFI_ASM 1
 #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
 #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_16 1
@@ -203,26 +210,31 @@
 #define __GXX_RTTI 1
 #define __GXX_WEAK__ 1
 #define __HAVE_FUNCTION_MULTI_VERSIONING 1
+#define __INT16_C(c) c
 #define __INT16_C_SUFFIX__ 
 #define __INT16_FMTd__ "hd"
 #define __INT16_FMTi__ "hi"
 #define __INT16_MAX__ 32767
 #define __INT16_TYPE__ short
+#define __INT32_C(c) c
 #define __INT32_C_SUFFIX__ 
 #define __INT32_FMTd__ "d"
 #define __INT32_FMTi__ "i"
 #define __INT32_MAX__ 2147483647
 #define __INT32_TYPE__ int
+#define __INT64_C(c) c##LL
 #define __INT64_C_SUFFIX__ LL
 #define __INT64_FMTd__ "lld"
 #define __INT64_FMTi__ "lli"
 #define __INT64_MAX__ 9223372036854775807LL
 #define __INT64_TYPE__ long long int
+#define __INT8_C(c) c
 #define __INT8_C_SUFFIX__ 
 #define __INT8_FMTd__ "hhd"
 #define __INT8_FMTi__ "hhi"
 #define __INT8_MAX__ 127
 #define __INT8_TYPE__ signed char
+#define __INTMAX_C(c) c##L
 #define __INTMAX_C_SUFFIX__ L
 #define __INTMAX_FMTd__ "ld"
 #define __INTMAX_FMTi__ "li"
@@ -359,6 +371,7 @@
 #define __STDC_UTF_16__ 1
 #define __STDC_UTF_32__ 1
 #define __STDC__ 1
+#define __UINT16_C(c) c
 #define __UINT16_C_SUFFIX__ 
 #define __UINT16_FMTX__ "hX"
 #define __UINT16_FMTo__ "ho"
@@ -366,6 +379,7 @@
 #define __UINT16_FMTx__ "hx"
 #define __UINT16_MAX__ 65535
 #define __UINT16_TYPE__ unsigned short
+#define __UINT32_C(c) c##U
 #define __UINT32_C_SUFFIX__ U
 #define __UINT32_FMTX__ "X"
 #define __UINT32_FMTo__ "o"
@@ -373,6 +387,7 @@
 #define __UINT32_FMTx__ "x"
 #define __UINT32_MAX__ 4294967295U
 #define __UINT32_TYPE__ unsigned int
+#define __UINT64_C(c) c##ULL
 #define __UINT64_C_SUFFIX__ ULL
 #define __UINT64_FMTX__ "llX"
 #define __UINT64_FMTo__ "llo"
@@ -380,6 +395,7 @@
 #define __UINT64_FMTx__ "llx"
 #define __UINT64_MAX__ 18446744073709551615ULL
 #define __UINT64_TYPE__ long long unsigned int
+#define __UINT8_C(c) c
 #define __UINT8_C_SUFFIX__ 
 #define __UINT8_FMTX__ "hhX"
 #define __UINT8_FMTo__ "hho"
@@ -387,6 +403,7 @@
 #define __UINT8_FMTx__ "hhx"
 #define __UINT8_MAX__ 255
 #define __UINT8_TYPE__ unsigned char
+#define __UINTMAX_C(c) c##UL
 #define __UINTMAX_C_SUFFIX__ UL
 #define __UINTMAX_FMTX__ "lX"
 #define __UINTMAX_FMTo__ "lo"
@@ -451,7 +468,7 @@
 #define __UINT_LEAST8_MAX__ 255
 #define __UINT_LEAST8_TYPE__ unsigned char
 #define __USER_LABEL_PREFIX__ _
-#define __VERSION__ "Apple LLVM 17.0.0 (clang-1700.0.13.5)"
+#define __VERSION__ "Apple LLVM 21.0.0 (clang-2100.0.123.102)"
 #define __WCHAR_MAX__ 2147483647
 #define __WCHAR_TYPE__ int
 #define __WCHAR_WIDTH__ 32
@@ -459,16 +476,16 @@
 #define __WINT_TYPE__ int
 #define __WINT_WIDTH__ 32
 #define __aarch64__ 1
-#define __apple_build_version__ 17000013
+#define __apple_build_version__ 21000099
 #define __arm64 1
 #define __arm64__ 1
 #define __block __attribute__((__blocks__(byref)))
 #define __clang__ 1
 #define __clang_literal_encoding__ "UTF-8"
-#define __clang_major__ 17
+#define __clang_major__ 21
 #define __clang_minor__ 0
 #define __clang_patchlevel__ 0
-#define __clang_version__ "17.0.0 (clang-1700.0.13.5)"
+#define __clang_version__ "21.0.0 (clang-2100.0.123.102)"
 #define __clang_wide_literal_encoding__ "UTF-32"
 #define __cplusplus 201703L
 #define __cpp_aggregate_bases 201603L
@@ -514,9 +531,9 @@
 #define __cpp_return_type_deduction 201304L
 #define __cpp_rtti 199711L
 #define __cpp_rvalue_references 200610L
-#define __cpp_static_assert 201411L
+#define __cpp_static_assert 202306L
 #define __cpp_static_call_operator 202207L
-#define __cpp_structured_bindings 202403L
+#define __cpp_structured_bindings 202411L
 #define __cpp_template_auto 201606L
 #define __cpp_template_template_args 201611L
 #define __cpp_threadsafe_static_init 200806L
@@ -524,6 +541,7 @@
 #define __cpp_unicode_literals 200710L
 #define __cpp_user_defined_literals 200809L
 #define __cpp_variable_templates 201304L
+#define __cpp_variadic_friend 202403L
 #define __cpp_variadic_templates 200704L
 #define __cpp_variadic_using 201611L
 #define __llvm__ 1

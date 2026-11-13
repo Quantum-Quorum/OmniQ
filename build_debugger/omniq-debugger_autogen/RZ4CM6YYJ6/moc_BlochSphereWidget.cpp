@@ -38,10 +38,29 @@ template <> constexpr inline auto BlochSphereWidget::qt_create_metaobjectdata<qt
 {
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
-        "BlochSphereWidget"
+        "BlochSphereWidget",
+        "stepSelected",
+        "",
+        "step",
+        "runRequested",
+        "pauseRequested",
+        "stepForwardRequested",
+        "resetRequested"
     };
 
     QtMocHelpers::UintData qt_methods {
+        // Signal 'stepSelected'
+        QtMocHelpers::SignalData<void(int)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 3 },
+        }}),
+        // Signal 'runRequested'
+        QtMocHelpers::SignalData<void()>(4, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'pauseRequested'
+        QtMocHelpers::SignalData<void()>(5, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'stepForwardRequested'
+        QtMocHelpers::SignalData<void()>(6, 2, QMC::AccessPublic, QMetaType::Void),
+        // Signal 'resetRequested'
+        QtMocHelpers::SignalData<void()>(7, 2, QMC::AccessPublic, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -51,7 +70,7 @@ template <> constexpr inline auto BlochSphereWidget::qt_create_metaobjectdata<qt
             qt_methods, qt_properties, qt_enums);
 }
 Q_CONSTINIT const QMetaObject BlochSphereWidget::staticMetaObject = { {
-    QMetaObject::SuperData::link<QOpenGLWidget::staticMetaObject>(),
+    QMetaObject::SuperData::link<QWidget::staticMetaObject>(),
     qt_staticMetaObjectStaticContent<qt_meta_tag_ZN17BlochSphereWidgetE_t>.stringdata,
     qt_staticMetaObjectStaticContent<qt_meta_tag_ZN17BlochSphereWidgetE_t>.data,
     qt_static_metacall,
@@ -63,10 +82,28 @@ Q_CONSTINIT const QMetaObject BlochSphereWidget::staticMetaObject = { {
 void BlochSphereWidget::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, void **_a)
 {
     auto *_t = static_cast<BlochSphereWidget *>(_o);
-    (void)_t;
-    (void)_c;
-    (void)_id;
-    (void)_a;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        switch (_id) {
+        case 0: _t->stepSelected((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 1: _t->runRequested(); break;
+        case 2: _t->pauseRequested(); break;
+        case 3: _t->stepForwardRequested(); break;
+        case 4: _t->resetRequested(); break;
+        default: ;
+        }
+    }
+    if (_c == QMetaObject::IndexOfMethod) {
+        if (QtMocHelpers::indexOfMethod<void (BlochSphereWidget::*)(int )>(_a, &BlochSphereWidget::stepSelected, 0))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (BlochSphereWidget::*)()>(_a, &BlochSphereWidget::runRequested, 1))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (BlochSphereWidget::*)()>(_a, &BlochSphereWidget::pauseRequested, 2))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (BlochSphereWidget::*)()>(_a, &BlochSphereWidget::stepForwardRequested, 3))
+            return;
+        if (QtMocHelpers::indexOfMethod<void (BlochSphereWidget::*)()>(_a, &BlochSphereWidget::resetRequested, 4))
+            return;
+    }
 }
 
 const QMetaObject *BlochSphereWidget::metaObject() const
@@ -79,14 +116,54 @@ void *BlochSphereWidget::qt_metacast(const char *_clname)
     if (!_clname) return nullptr;
     if (!strcmp(_clname, qt_staticMetaObjectStaticContent<qt_meta_tag_ZN17BlochSphereWidgetE_t>.strings))
         return static_cast<void*>(this);
-    if (!strcmp(_clname, "QOpenGLExtraFunctions"))
-        return static_cast< QOpenGLExtraFunctions*>(this);
-    return QOpenGLWidget::qt_metacast(_clname);
+    return QWidget::qt_metacast(_clname);
 }
 
 int BlochSphereWidget::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
 {
-    _id = QOpenGLWidget::qt_metacall(_c, _id, _a);
+    _id = QWidget::qt_metacall(_c, _id, _a);
+    if (_id < 0)
+        return _id;
+    if (_c == QMetaObject::InvokeMetaMethod) {
+        if (_id < 5)
+            qt_static_metacall(this, _c, _id, _a);
+        _id -= 5;
+    }
+    if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
+        if (_id < 5)
+            *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
+        _id -= 5;
+    }
     return _id;
+}
+
+// SIGNAL 0
+void BlochSphereWidget::stepSelected(int _t1)
+{
+    QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1);
+}
+
+// SIGNAL 1
+void BlochSphereWidget::runRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 1, nullptr);
+}
+
+// SIGNAL 2
+void BlochSphereWidget::pauseRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 2, nullptr);
+}
+
+// SIGNAL 3
+void BlochSphereWidget::stepForwardRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 3, nullptr);
+}
+
+// SIGNAL 4
+void BlochSphereWidget::resetRequested()
+{
+    QMetaObject::activate(this, &staticMetaObject, 4, nullptr);
 }
 QT_WARNING_POP

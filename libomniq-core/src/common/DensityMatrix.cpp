@@ -289,10 +289,12 @@ MatrixXcd DensityMatrix::partialTrace(const std::vector<int>& qubitsToTrace) con
     }
     
     MatrixXcd result = densityMatrix_;
+    int currentQubits = numQubits_;
     
     // Perform partial trace
     for (int qubit : sortedQubits) {
-        result = Operators::partialTrace(result, qubit, numQubits_);
+        result = Operators::partialTrace(result, qubit, currentQubits);
+        currentQubits--;
     }
     
     return result;

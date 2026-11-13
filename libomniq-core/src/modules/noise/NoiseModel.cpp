@@ -33,12 +33,8 @@ double NoiseModel::calculateDepolarizingError(double fidelity) const {
 
 void NoiseModel::applyGateNoise(DensityMatrix &rho, const std::string &gateName,
                                 const std::vector<int> &qubits) const {
-  if (!enabled_)
+  if (!enabled_ || qubits.empty())
     return;
-  if (rho.getNumQubits() != 1) {
-    // Multi-qubit noise not yet implemented
-    return;
-  }
 
   double fidelity;
   double gateTime;
@@ -52,25 +48,25 @@ void NoiseModel::applyGateNoise(DensityMatrix &rho, const std::string &gateName,
     gateTime = hwParams_.singleQubitGateTime;
   }
 
-  // Apply depolarizing noise based on gate fidelity
+  // Apply depolarizing noise based on gate fidelity to all qubits in gate
   double depolarizingProb = calculateDepolarizingError(fidelity);
   if (depolarizingProb > 0.0) {
     DepolarizingChannel depolarizing(depolarizingProb);
-    depolarizing.apply(rho, qubits[0]);
+    for (int q : qubits) {
+      depolarizing.apply(rho, q);
+    }
   }
 
   // Apply decoherence during gate execution
-  applyIdleNoise(rho, qubits[0], gateTime);
+  for (int q : qubits) {
+    applyIdleNoise(rho, q, gateTime);
+  }
 }
 
 void NoiseModel::applyIdleNoise(DensityMatrix &rho, int qubit,
                                 double idleTime) const {
-  if (!enabled_ || idleTime <= 0.0)
+  if (!enabled_ || idleTime <= 0.0 || qubit < 0 || qubit >= rho.getNumQubits())
     return;
-  if (rho.getNumQubits() != 1) {
-    // Multi-qubit noise not yet implemented
-    return;
-  }
 
   // Apply T1 relaxation (amplitude damping)
   double gamma_T1 = 1.0 - std::exp(-idleTime / hwParams_.T1);

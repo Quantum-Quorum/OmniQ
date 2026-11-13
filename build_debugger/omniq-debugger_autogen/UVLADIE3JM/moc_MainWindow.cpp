@@ -55,7 +55,8 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         "onGateAdded",
         "gateType",
         "qubit",
-        "parameter"
+        "parameter",
+        "onRunTimerTick"
     };
 
     QtMocHelpers::UintData qt_methods {
@@ -85,6 +86,8 @@ template <> constexpr inline auto MainWindow::qt_create_metaobjectdata<qt_meta_t
         QtMocHelpers::SlotData<void(const QString &, int, double)>(13, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::QString, 14 }, { QMetaType::Int, 15 }, { QMetaType::Double, 16 },
         }}),
+        // Slot 'onRunTimerTick'
+        QtMocHelpers::SlotData<void()>(17, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -120,6 +123,7 @@ void MainWindow::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id, 
         case 9: _t->about(); break;
         case 10: _t->updateStatus(); break;
         case 11: _t->onGateAdded((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<int>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3]))); break;
+        case 12: _t->onRunTimerTick(); break;
         default: ;
         }
     }
@@ -144,14 +148,14 @@ int MainWindow::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 12)
+        if (_id < 13)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 12;
+        _id -= 13;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 12)
+        if (_id < 13)
             *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType();
-        _id -= 12;
+        _id -= 13;
     }
     return _id;
 }

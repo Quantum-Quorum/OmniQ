@@ -4,6 +4,7 @@
 
 #include "omniq/Spectral.h"
 #include <Eigen/Eigenvalues>
+#include <iostream>
 
 namespace omniq {
 

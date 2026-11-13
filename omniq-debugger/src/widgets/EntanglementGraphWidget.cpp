@@ -328,8 +328,8 @@ void EntanglementGraphWidget::mousePressEvent(QMouseEvent *event) {
 }
 
 void EntanglementGraphWidget::mouseMoveEvent(QMouseEvent *event) {
-  int dx = event->x() - lastMousePos_.x();
-  int dy = event->y() - lastMousePos_.y();
+  int dx = static_cast<int>(event->position().x() - lastMousePos_.x());
+  int dy = static_cast<int>(event->position().y() - lastMousePos_.y());
 
   if (event->buttons() & Qt::LeftButton) {
     rotationX_ += dy;

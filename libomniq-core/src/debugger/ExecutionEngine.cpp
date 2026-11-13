@@ -54,11 +54,36 @@ void ExecutionEngine::stepForward() {
     case GateType::RZ:
       currentState_.applyRotationZ(gate.targetQubits[0], gate.parameters[0]);
       break;
+    case GateType::SWAP: {
+      int q1 = gate.targetQubits[0];
+      int q2 = (gate.targetQubits.size() > 1) ? gate.targetQubits[1] : gate.controlQubits[0];
+      currentState_.applyCNOT(q1, q2);
+      currentState_.applyCNOT(q2, q1);
+      currentState_.applyCNOT(q1, q2);
+      break;
+    }
+    case GateType::CP: {
+      int ctrl = gate.controlQubits[0];
+      int tgt = gate.targetQubits[0];
+      double theta = gate.parameters[0];
+      currentState_.applyPhaseShift(ctrl, theta / 2.0);
+      currentState_.applyPhaseShift(tgt, theta / 2.0);
+      currentState_.applyCNOT(ctrl, tgt);
+      currentState_.applyPhaseShift(tgt, -theta / 2.0);
+      currentState_.applyCNOT(ctrl, tgt);
+      break;
+    }
+    case GateType::MEASURE:
+      currentState_.measure(gate.targetQubits[0]);
+      break;
     default:
       break;
     }
 
     currentStep_++;
+    if (currentStep_ < static_cast<int>(stateHistory_.size())) {
+      stateHistory_.erase(stateHistory_.begin() + currentStep_, stateHistory_.end());
+    }
     stateHistory_.push_back(currentState_);
   }
 }
@@ -73,6 +98,8 @@ void ExecutionEngine::stepBackward() {
 }
 
 void ExecutionEngine::runToBreakpoint() {
+  if (isFinished()) return;
+  stepForward();
   while (!isFinished() && !isAtBreakpoint()) {
     stepForward();
   }

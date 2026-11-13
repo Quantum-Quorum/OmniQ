@@ -35,19 +35,24 @@ void NoiseChannel::applyKrausOperators(
   const MatrixXcd &rho_matrix = rho.getDensityMatrix();
   MatrixXcd new_rho = MatrixXcd::Zero(dim, dim);
 
-  // Apply each Kraus operator: ρ' += E_k ⊗ I ... ⊗ I × ρ × (E_k ⊗ I ... ⊗ I)†
+  // Apply each Kraus operator: ρ' += E_k_full × ρ × E_k_full†
   for (const auto &E_k : kraus) {
-    // Build full operator E_k ⊗ I_{n-1}
-
-    // This is a simplified approach - proper implementation would use
-    // tensor product construction for the specific qubit index
-    // For now, assume single qubit system or apply to qubit 0
-    if (numQubits == 1) {
+    if (E_k.rows() == dim && E_k.cols() == dim) {
       new_rho += E_k * rho_matrix * E_k.adjoint();
+    } else if (E_k.rows() == 2 && E_k.cols() == 2) {
+      // Single-qubit Kraus operator embedded in multi-qubit system
+      MatrixXcd Ek_full = MatrixXcd::Identity(1, 1);
+      for (int i = 0; i < numQubits; ++i) {
+        if (i == qubit) {
+          Ek_full = Operators::tensorProduct(Ek_full, E_k);
+        } else {
+          Ek_full = Operators::tensorProduct(Ek_full, Operators::IDENTITY);
+        }
+      }
+      new_rho += Ek_full * rho_matrix * Ek_full.adjoint();
     } else {
-      // TODO: Implement proper multi-qubit Kraus application
-      // For now, only support single-qubit density matrices
-      throw std::runtime_error("Multi-qubit noise not yet fully implemented");
+      throw std::invalid_argument(
+          "Kraus operator dimensions incompatible with target density matrix");
     }
   }
 

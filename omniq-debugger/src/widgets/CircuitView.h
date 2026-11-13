@@ -9,6 +9,7 @@
 #include <QMouseEvent>
 #include <QOpenGLFunctions>
 #include <QOpenGLWidget>
+#include <QSet>
 #include <QString>
 #include <QVector>
 #include <QWheelEvent>
@@ -24,9 +25,19 @@ public:
 
   void setNumQubits(int numQubits);
   void addGate(int step, int qubit, const QString &gateType);
+  void addGate(int step, int qubit, int targetQubit, const QString &gateType,
+               double parameter = 0.0);
+  void setCurrentStep(int step);
+  void toggleBreakpoint(int step);
+  bool hasBreakpoint(int step) const;
+  const QSet<int> &getBreakpoints() const { return breakpoints_; }
   void clear();
 
   QSize sizeHint() const override;
+
+signals:
+  void breakpointToggled(int step);
+  void stepSelected(int step);
 
 protected:
   void initializeGL() override;
@@ -38,19 +49,24 @@ protected:
   void wheelEvent(QWheelEvent *event) override;
 
 private:
-  void drawQubitLine(QPainter &painter, int qubitIndex);
-  void drawGate(QPainter &painter, int x, int y, const QString &gateType);
-  void drawText(QPainter &painter, int x, int y, const QString &text);
-
   struct Gate {
     int step;
     int qubit;
+    int targetQubit; // -1 for single qubit
     QString type;
+    double parameter;
   };
+
+  void drawQubitLine(QPainter &painter, int qubitIndex, int maxStep);
+  void drawGate(QPainter &painter, const Gate &gate);
+  void drawPlayhead(QPainter &painter);
+  void drawBreakpoints(QPainter &painter, int maxStep);
 
   // Circuit data
   int numQubits_;
+  int currentStep_;
   QVector<Gate> gates_;
+  QSet<int> breakpoints_;
 
   // View parameters
   float offsetX_;

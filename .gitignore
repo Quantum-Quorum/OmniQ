@@ -1,4 +1,7 @@
 build/
+build_debugger/dummy_*
+build_debugger/*.app/
+libomniq-core/build_*/
 dist/
 *.egg-info/
 __pycache__/

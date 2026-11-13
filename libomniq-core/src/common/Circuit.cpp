@@ -6,6 +6,7 @@
 #include "omniq/Operators.h"
 #include <algorithm>
 #include <iomanip>
+#include <random>
 #include <sstream>
 #include <stdexcept>
 
@@ -442,10 +443,10 @@ void Circuit::performMeasurement(int qubit, int classicalBit) {
   double prob0 = 0.0;
   double prob1 = 0.0;
 
-  int dim = static_cast<int>(std::pow(2, numQubits_));
-  int qubitMask = 1 << qubit;
+  long long dim = stateVector_.size();
+  long long qubitMask = 1LL << qubit;
 
-  for (int i = 0; i < dim; ++i) {
+  for (long long i = 0; i < dim; ++i) {
     double amplitude = std::norm(stateVector_(i));
     if (i & qubitMask) {
       prob1 += amplitude;
@@ -456,17 +457,23 @@ void Circuit::performMeasurement(int qubit, int classicalBit) {
 
   // Normalize probabilities
   double total = prob0 + prob1;
-  prob0 /= total;
-  prob1 /= total;
+  if (total > 1e-12) {
+    prob0 /= total;
+    prob1 /= total;
+  } else {
+    prob0 = 1.0;
+    prob1 = 0.0;
+  }
 
-  // Perform measurement (simplified - always measure |0⟩ for deterministic
-  // behavior)
-  int measurementResult = 0; // For now, always measure |0⟩
+  // Quantum measurement sampling according to Born's rule
+  static thread_local std::mt19937_64 rng(std::random_device{}());
+  std::uniform_real_distribution<double> dist(0.0, 1.0);
+  int measurementResult = (dist(rng) < prob0) ? 0 : 1;
   classicalBits_[classicalBit] = measurementResult;
 
   // Collapse the state vector
-  for (int i = 0; i < dim; ++i) {
-    if ((i & qubitMask) != (measurementResult << qubit)) {
+  for (long long i = 0; i < dim; ++i) {
+    if (((i & qubitMask) >> qubit) != measurementResult) {
       stateVector_(i) = 0.0;
     }
   }
@@ -691,12 +698,34 @@ double Circuit::getQubitProbability(int qubit, int value) const {
 
 double Circuit::getQubitExpectation(int qubit, const std::string &observable) const {
   validateQubitIndex(qubit);
-  double prob0 = getQubitProbability(qubit, 0);
-  double prob1 = getQubitProbability(qubit, 1);
   if (observable == "Z") {
+    double prob0 = getQubitProbability(qubit, 0);
+    double prob1 = getQubitProbability(qubit, 1);
     return prob0 - prob1;
   }
-  return prob0 - prob1;
+  long long dim = stateVector_.size();
+  long long pairDist = 1LL << qubit;
+  double expectation = 0.0;
+  if (observable == "X") {
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+      for (long long j = 0; j < pairDist; ++j) {
+        long long idx0 = i + j;
+        long long idx1 = idx0 + pairDist;
+        expectation += 2.0 * (std::conj(stateVector_(idx0)) * stateVector_(idx1)).real();
+      }
+    }
+    return expectation;
+  } else if (observable == "Y") {
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+      for (long long j = 0; j < pairDist; ++j) {
+        long long idx0 = i + j;
+        long long idx1 = idx0 + pairDist;
+        expectation += 2.0 * (std::conj(stateVector_(idx0)) * stateVector_(idx1)).imag();
+      }
+    }
+    return expectation;
+  }
+  throw std::invalid_argument("Unknown observable: " + observable);
 }
 
 MatrixXcd Circuit::getDensityMatrix() const {

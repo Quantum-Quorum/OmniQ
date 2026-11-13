@@ -31,8 +31,64 @@ void QuantumState::applyGate(GateType type, int qubit, double parameter) {
     throw std::out_of_range("Qubit index out of range");
   }
 
-  MatrixXcd gateMatrix = createSingleQubitGate(type, qubit, parameter);
-  stateVector_ = gateMatrix * stateVector_;
+  Matrix2cd gateMatrix;
+  switch (type) {
+  case GateType::H:
+    gateMatrix = (Matrix2cd() << 1.0 / std::sqrt(2), 1.0 / std::sqrt(2),
+                  1.0 / std::sqrt(2), -1.0 / std::sqrt(2))
+                     .finished();
+    break;
+  case GateType::X:
+    gateMatrix = (Matrix2cd() << 0.0, 1.0, 1.0, 0.0).finished();
+    break;
+  case GateType::Y:
+    gateMatrix = (Matrix2cd() << 0.0, std::complex<double>(0, -1),
+                  std::complex<double>(0, 1), 0.0)
+                     .finished();
+    break;
+  case GateType::Z:
+    gateMatrix = (Matrix2cd() << 1.0, 0.0, 0.0, -1.0).finished();
+    break;
+  case GateType::PHASE:
+    gateMatrix = (Matrix2cd() << 1.0, 0.0, 0.0,
+                  std::exp(std::complex<double>(0, parameter)))
+                     .finished();
+    break;
+  case GateType::RX:
+    gateMatrix = (Matrix2cd() << std::cos(parameter / 2),
+                  std::complex<double>(0, -std::sin(parameter / 2)),
+                  std::complex<double>(0, -std::sin(parameter / 2)),
+                  std::cos(parameter / 2))
+                     .finished();
+    break;
+  case GateType::RY:
+    gateMatrix =
+        (Matrix2cd() << std::cos(parameter / 2), -std::sin(parameter / 2),
+         std::sin(parameter / 2), std::cos(parameter / 2))
+            .finished();
+    break;
+  case GateType::RZ:
+    gateMatrix =
+        (Matrix2cd() << std::exp(std::complex<double>(0, -parameter / 2)), 0.0,
+         0.0, std::exp(std::complex<double>(0, parameter / 2)))
+            .finished();
+    break;
+  default:
+    throw std::invalid_argument("Unsupported gate type for single qubit");
+  }
+
+  long long dim = stateVector_.size();
+  long long pairDist = 1LL << qubit;
+  for (long long i = 0; i < dim; i += 2 * pairDist) {
+    for (long long j = 0; j < pairDist; ++j) {
+      long long idx0 = i + j;
+      long long idx1 = idx0 + pairDist;
+      std::complex<double> a = stateVector_(idx0);
+      std::complex<double> b = stateVector_(idx1);
+      stateVector_(idx0) = gateMatrix(0, 0) * a + gateMatrix(0, 1) * b;
+      stateVector_(idx1) = gateMatrix(1, 0) * a + gateMatrix(1, 1) * b;
+    }
+  }
 }
 
 void QuantumState::applyGate(GateType type, int control, int target,
@@ -46,8 +102,40 @@ void QuantumState::applyGate(GateType type, int control, int target,
     throw std::invalid_argument("Control and target qubits must be different");
   }
 
-  MatrixXcd gateMatrix = createTwoQubitGate(type, control, target, parameter);
-  stateVector_ = gateMatrix * stateVector_;
+  long long dim = stateVector_.size();
+  long long cMask = 1LL << control;
+  long long tMask = 1LL << target;
+
+  if (type == GateType::CNOT) {
+    long long pairDist = tMask;
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+      for (long long j = 0; j < pairDist; ++j) {
+        long long idx0 = i + j;
+        if ((idx0 & cMask) != 0) {
+          long long idx1 = idx0 + pairDist;
+          std::swap(stateVector_(idx0), stateVector_(idx1));
+        }
+      }
+    }
+  } else if (type == GateType::SWAP) {
+    for (long long i = 0; i < dim; ++i) {
+      bool b1 = (i & cMask) != 0;
+      bool b2 = (i & tMask) != 0;
+      if (b1 != b2) {
+        long long targetIdx = i ^ cMask ^ tMask;
+        if (i < targetIdx) {
+          std::swap(stateVector_(i), stateVector_(targetIdx));
+        }
+      }
+    }
+  } else if (type == GateType::CP) {
+    std::complex<double> phase(std::cos(parameter), std::sin(parameter));
+    for (long long i = 0; i < dim; ++i) {
+      if ((i & cMask) && (i & tMask)) {
+        stateVector_(i) *= phase;
+      }
+    }
+  }
 }
 
 double QuantumState::getQubitProbability(int qubit, int value) const {
@@ -260,6 +348,17 @@ bool QuantumCircuit::executeStep(QuantumState &state) {
 }
 
 void QuantumCircuit::reset() { currentStep_ = 0; }
+
+void QuantumCircuit::clear() {
+  gates_.clear();
+  currentStep_ = 0;
+}
+
+void QuantumCircuit::removeGate(int index) {
+  if (index >= 0 && index < static_cast<int>(gates_.size())) {
+    gates_.erase(gates_.begin() + index);
+  }
+}
 
 std::string QuantumCircuit::getGateDescription(int step) const {
   if (step < 0 || step >= static_cast<int>(gates_.size())) {

@@ -65,6 +65,7 @@ private slots:
   void about();
   void updateStatus();
   void onGateAdded(const QString &gateType, int qubit, double parameter);
+  void onRunTimerTick();
 
 private:
   void setupUI();
@@ -74,6 +75,7 @@ private:
   void setupCircuitBuilder();
   void setupStatusBar();
   void createActions();
+  void resetDockLayout();
   void loadSettings();
   void saveSettings();
   QDockWidget *circuitDock;
@@ -81,6 +83,9 @@ private:
   QDockWidget *qubitDock;
   QDockWidget *outputDock;
   QDockWidget *blochDock;
+  QComboBox *blochQubitCombo_;
+  QPushButton *blochRunBtn_;
+  int activeBlochQubit_;
 
   // Controls
   QToolBar *debugToolBar;
@@ -108,6 +113,7 @@ private:
   QAction *runAction;
   QAction *pauseAction;
   QAction *resetAction;
+  QAction *resetLayoutAction;
   QAction *aboutAction;
 
   // State
@@ -115,6 +121,7 @@ private:
   int currentStep;
   int totalSteps;
   QTimer *updateTimer;
+  QTimer *runTimer_;
 
   // UI Components
   QSplitter *mainSplitter;

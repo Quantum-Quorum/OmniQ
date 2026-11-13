@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
+#include <random>
 
 namespace omniq {
 
@@ -97,74 +98,147 @@ std::string Statevector::toString() const {
 
 void Statevector::applyHadamard(int qubit) {
     validateQubitIndex(qubit);
-    
-    MatrixXcd hadamardMatrix = createSingleQubitGate(Operators::HADAMARD, qubit);
-    stateVector_ = hadamardMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+    double invSqrt2 = 1.0 / std::sqrt(2.0);
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx0 = i + j;
+            long long idx1 = idx0 + pairDist;
+            std::complex<double> a = stateVector_(idx0);
+            std::complex<double> b = stateVector_(idx1);
+            stateVector_(idx0) = invSqrt2 * (a + b);
+            stateVector_(idx1) = invSqrt2 * (a - b);
+        }
+    }
 }
 
 void Statevector::applyCNOT(int control, int target) {
     validateQubitIndex(control);
     validateQubitIndex(target);
-    
     if (control == target) {
         throw std::invalid_argument("Control and target qubits must be different");
     }
-    
-    MatrixXcd cnotMatrix = createTwoQubitGate(Operators::CNOT, control, target);
-    stateVector_ = cnotMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long controlMask = 1LL << control;
+    long long pairDist = 1LL << target;
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx0 = i + j;
+            if ((idx0 & controlMask) != 0) {
+                long long idx1 = idx0 + pairDist;
+                std::swap(stateVector_(idx0), stateVector_(idx1));
+            }
+        }
+    }
 }
 
 void Statevector::applyPauliX(int qubit) {
     validateQubitIndex(qubit);
-    
-    MatrixXcd pauliXMatrix = createSingleQubitGate(Operators::PAULI_X, qubit);
-    stateVector_ = pauliXMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx0 = i + j;
+            long long idx1 = idx0 + pairDist;
+            std::swap(stateVector_(idx0), stateVector_(idx1));
+        }
+    }
 }
 
 void Statevector::applyPauliY(int qubit) {
     validateQubitIndex(qubit);
-    
-    MatrixXcd pauliYMatrix = createSingleQubitGate(Operators::PAULI_Y, qubit);
-    stateVector_ = pauliYMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+    std::complex<double> imagUnit(0.0, 1.0);
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx0 = i + j;
+            long long idx1 = idx0 + pairDist;
+            std::complex<double> a = stateVector_(idx0);
+            std::complex<double> b = stateVector_(idx1);
+            stateVector_(idx0) = -imagUnit * b;
+            stateVector_(idx1) = imagUnit * a;
+        }
+    }
 }
 
 void Statevector::applyPauliZ(int qubit) {
     validateQubitIndex(qubit);
-    
-    MatrixXcd pauliZMatrix = createSingleQubitGate(Operators::PAULI_Z, qubit);
-    stateVector_ = pauliZMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx1 = i + j + pairDist;
+            stateVector_(idx1) = -stateVector_(idx1);
+        }
+    }
 }
 
 void Statevector::applyPhaseShift(int qubit, double angle) {
     validateQubitIndex(qubit);
-    
-    Matrix2cd phaseMatrix = Operators::phaseShift(angle);
-    MatrixXcd fullMatrix = createSingleQubitGate(phaseMatrix, qubit);
-    stateVector_ = fullMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+    std::complex<double> phase(std::cos(angle), std::sin(angle));
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx1 = i + j + pairDist;
+            stateVector_(idx1) *= phase;
+        }
+    }
 }
 
 void Statevector::applyRotationX(int qubit, double angle) {
     validateQubitIndex(qubit);
-    
-    Matrix2cd rotationMatrix = Operators::rotationX(angle);
-    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
-    stateVector_ = fullMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+    double c = std::cos(angle / 2.0);
+    double s = std::sin(angle / 2.0);
+    std::complex<double> mi_s(0.0, -s);
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx0 = i + j;
+            long long idx1 = idx0 + pairDist;
+            std::complex<double> a = stateVector_(idx0);
+            std::complex<double> b = stateVector_(idx1);
+            stateVector_(idx0) = c * a + mi_s * b;
+            stateVector_(idx1) = mi_s * a + c * b;
+        }
+    }
 }
 
 void Statevector::applyRotationY(int qubit, double angle) {
     validateQubitIndex(qubit);
-    
-    Matrix2cd rotationMatrix = Operators::rotationY(angle);
-    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
-    stateVector_ = fullMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+    double c = std::cos(angle / 2.0);
+    double s = std::sin(angle / 2.0);
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx0 = i + j;
+            long long idx1 = idx0 + pairDist;
+            std::complex<double> a = stateVector_(idx0);
+            std::complex<double> b = stateVector_(idx1);
+            stateVector_(idx0) = c * a - s * b;
+            stateVector_(idx1) = s * a + c * b;
+        }
+    }
 }
 
 void Statevector::applyRotationZ(int qubit, double angle) {
     validateQubitIndex(qubit);
-    
-    Matrix2cd rotationMatrix = Operators::rotationZ(angle);
-    MatrixXcd fullMatrix = createSingleQubitGate(rotationMatrix, qubit);
-    stateVector_ = fullMatrix * stateVector_;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+    std::complex<double> phase_neg(std::cos(-angle / 2.0), std::sin(-angle / 2.0));
+    std::complex<double> phase_pos(std::cos(angle / 2.0), std::sin(angle / 2.0));
+    for (long long i = 0; i < dim; i += 2 * pairDist) {
+        for (long long j = 0; j < pairDist; ++j) {
+            long long idx0 = i + j;
+            long long idx1 = idx0 + pairDist;
+            stateVector_(idx0) *= phase_neg;
+            stateVector_(idx1) *= phase_pos;
+        }
+    }
 }
 
 int Statevector::measure(int qubit) {
@@ -174,9 +248,10 @@ int Statevector::measure(int qubit) {
     double prob0 = 0.0;
     double prob1 = 0.0;
     
-    int qubitMask = 1 << qubit;
+    long long dim = stateVector_.size();
+    long long qubitMask = 1LL << qubit;
     
-    for (int i = 0; i < stateVector_.size(); ++i) {
+    for (long long i = 0; i < dim; ++i) {
         double amplitude = std::norm(stateVector_(i));
         if (i & qubitMask) {
             prob1 += amplitude;
@@ -187,16 +262,22 @@ int Statevector::measure(int qubit) {
     
     // Normalize probabilities
     double total = prob0 + prob1;
-    prob0 /= total;
-    prob1 /= total;
+    if (total > 1e-12) {
+        prob0 /= total;
+        prob1 /= total;
+    } else {
+        prob0 = 1.0;
+        prob1 = 0.0;
+    }
     
-    // For deterministic behavior, always return 0
-    // In a real implementation, you would use a random number generator
-    int measurementResult = 0;
+    // Born's rule quantum measurement sampling
+    static thread_local std::mt19937_64 rng(std::random_device{}());
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    int measurementResult = (dist(rng) < prob0) ? 0 : 1;
     
     // Collapse the state vector
-    for (int i = 0; i < stateVector_.size(); ++i) {
-        if ((i & qubitMask) != (measurementResult << qubit)) {
+    for (long long i = 0; i < dim; ++i) {
+        if (((i & qubitMask) >> qubit) != measurementResult) {
             stateVector_(i) = 0.0;
         }
     }
@@ -209,22 +290,44 @@ int Statevector::measure(int qubit) {
 
 double Statevector::measureExpectation(int qubit, const std::string& observable) {
     validateQubitIndex(qubit);
-    
-    Matrix2cd obsMatrix;
-    if (observable == "X") {
-        obsMatrix = Operators::PAULI_X;
+    long long dim = stateVector_.size();
+    long long pairDist = 1LL << qubit;
+
+    if (observable == "Z") {
+        double prob0 = 0.0;
+        double prob1 = 0.0;
+        long long qubitMask = 1LL << qubit;
+        for (long long i = 0; i < dim; ++i) {
+            double amplitude = std::norm(stateVector_(i));
+            if (i & qubitMask) {
+                prob1 += amplitude;
+            } else {
+                prob0 += amplitude;
+            }
+        }
+        return prob0 - prob1;
+    } else if (observable == "X") {
+        double expectation = 0.0;
+        for (long long i = 0; i < dim; i += 2 * pairDist) {
+            for (long long j = 0; j < pairDist; ++j) {
+                long long idx0 = i + j;
+                long long idx1 = idx0 + pairDist;
+                expectation += 2.0 * (std::conj(stateVector_(idx0)) * stateVector_(idx1)).real();
+            }
+        }
+        return expectation;
     } else if (observable == "Y") {
-        obsMatrix = Operators::PAULI_Y;
-    } else if (observable == "Z") {
-        obsMatrix = Operators::PAULI_Z;
-    } else {
-        throw std::invalid_argument("Unknown observable: " + observable);
+        double expectation = 0.0;
+        for (long long i = 0; i < dim; i += 2 * pairDist) {
+            for (long long j = 0; j < pairDist; ++j) {
+                long long idx0 = i + j;
+                long long idx1 = idx0 + pairDist;
+                expectation += 2.0 * (std::conj(stateVector_(idx0)) * stateVector_(idx1)).imag();
+            }
+        }
+        return expectation;
     }
-    
-    MatrixXcd fullMatrix = createSingleQubitGate(obsMatrix, qubit);
-    std::complex<double> expectation = stateVector_.adjoint() * fullMatrix * stateVector_;
-    
-    return expectation.real();
+    throw std::invalid_argument("Unknown observable: " + observable);
 }
 
 MatrixXcd Statevector::createSingleQubitGate(const Matrix2cd& gate, int qubit) const {

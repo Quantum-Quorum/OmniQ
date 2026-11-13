@@ -23,11 +23,7 @@ bool CoreInterface::createCircuit(int numQubits, int numClassicalBits) {
     circuit_ = std::make_unique<omniq::QuantumCircuit>(numQubits);
     currentState_ = std::make_unique<omniq::QuantumState>(numQubits);
 
-    circuit_->addGate(omniq::GateType::H, 0);
-    circuit_->addGate(omniq::GateType::CNOT, 0, 1);
-    circuit_->addGate(omniq::GateType::H, 1);
-
-    totalSteps_ = circuit_->getTotalSteps();
+    totalSteps_ = 0;
     currentStep_ = 0;
     isExecuting_ = false;
 
@@ -78,24 +74,77 @@ bool CoreInterface::saveCircuit(const QString &filename) {
 }
 
 QString CoreInterface::getCircuitQASM() const {
+  if (!circuit_) return "";
+  int numQubits = currentState_ ? currentState_->getNumQubits() : 2;
   QString qasm = "OPENQASM 2.0;\n";
   qasm += "include \"qelib1.inc\";\n\n";
-  qasm += "qreg q[2];\n";
-  qasm += "creg c[2];\n\n";
-  qasm += "h q[0];\n";
-  qasm += "cx q[0], q[1];\n";
-  qasm += "measure q[0] -> c[0];\n";
-  qasm += "measure q[1] -> c[1];\n";
+  qasm += QString("qreg q[%1];\n").arg(numQubits);
+  qasm += QString("creg c[%1];\n\n").arg(numQubits);
+
+  const auto &gates = circuit_->getGates();
+  for (const auto &gate : gates) {
+    omniq::GateType type = std::get<0>(gate);
+    int q1 = std::get<1>(gate);
+    int q2 = std::get<2>(gate);
+    double param = std::get<3>(gate);
+
+    switch (type) {
+    case omniq::GateType::H:
+      qasm += QString("h q[%1];\n").arg(q1);
+      break;
+    case omniq::GateType::X:
+      qasm += QString("x q[%1];\n").arg(q1);
+      break;
+    case omniq::GateType::Y:
+      qasm += QString("y q[%1];\n").arg(q1);
+      break;
+    case omniq::GateType::Z:
+      qasm += QString("z q[%1];\n").arg(q1);
+      break;
+    case omniq::GateType::CNOT:
+      qasm += QString("cx q[%1], q[%2];\n").arg(q1).arg(q2);
+      break;
+    case omniq::GateType::SWAP:
+      qasm += QString("swap q[%1], q[%2];\n").arg(q1).arg(q2);
+      break;
+    case omniq::GateType::PHASE:
+      qasm += QString("p(%1) q[%2];\n").arg(param).arg(q1);
+      break;
+    case omniq::GateType::RX:
+      qasm += QString("rx(%1) q[%2];\n").arg(param).arg(q1);
+      break;
+    case omniq::GateType::RY:
+      qasm += QString("ry(%1) q[%2];\n").arg(param).arg(q1);
+      break;
+    case omniq::GateType::RZ:
+      qasm += QString("rz(%1) q[%2];\n").arg(param).arg(q1);
+      break;
+    case omniq::GateType::CP:
+      qasm += QString("cp(%1) q[%2], q[%3];\n").arg(param).arg(q1).arg(q2);
+      break;
+    }
+  }
+
+  for (int q = 0; q < numQubits; ++q) {
+    qasm += QString("measure q[%1] -> c[%1];\n").arg(q);
+  }
 
   return qasm;
 }
 
 bool CoreInterface::executeStep(int step) {
-  if (!validateStepIndex(step) || !circuit_ || !currentState_) {
+  if (!circuit_ || !currentState_ || step < 0 || step > totalSteps_) {
     return false;
   }
 
   try {
+    if (step < currentStep_) {
+      // Step backward or rewind to previous step
+      currentState_->reset();
+      circuit_->reset();
+      currentStep_ = 0;
+    }
+
     while (currentStep_ < step && circuit_->executeStep(*currentState_)) {
       currentStep_++;
     }
@@ -114,18 +163,20 @@ bool CoreInterface::executeStep(int step) {
 }
 
 bool CoreInterface::executeToStep(int step) {
-  for (int i = currentStep_ + 1; i <= step; ++i) {
-    if (!executeStep(i)) {
-      return false;
-    }
-  }
-  return true;
+  return executeStep(step);
 }
 
 bool CoreInterface::executeFull() { return executeToStep(totalSteps_); }
 
 void CoreInterface::resetExecution() {
+  if (currentState_) {
+    currentState_->reset();
+  }
+  if (circuit_) {
+    circuit_->reset();
+  }
   currentStep_ = 0;
+  updateQubitStates();
   emit executionStepChanged(currentStep_);
   emit stateChanged();
 }
@@ -160,47 +211,89 @@ QVector<QComplex> CoreInterface::getCurrentStateVector() const {
 
 QVector<QVector<QComplex>> CoreInterface::getCurrentDensityMatrix() const {
   QVector<QVector<QComplex>> result;
-  // Simulate a 4x4 density matrix
-  for (int i = 0; i < 4; ++i) {
-    QVector<QComplex> row;
-    for (int j = 0; j < 4; ++j) {
-      if (i == j) {
-        row.append(QComplex(0.25, 0.0));
-      } else {
-        row.append(QComplex(0.0, 0.0));
+  if (!currentState_) {
+    return result;
+  }
+
+  int n = currentState_->getNumQubits();
+  VectorXcd sv = currentState_->getStateVector();
+
+  if (n <= 4) {
+    int dim = 1 << n;
+    result.resize(dim);
+    for (int i = 0; i < dim; ++i) {
+      result[i].resize(dim);
+      for (int j = 0; j < dim; ++j) {
+        std::complex<double> val = sv(i) * std::conj(sv(j));
+        result[i][j] = QComplex::fromStdComplex(val);
       }
     }
-    result.append(row);
+  } else {
+    // For n > 4, compute 4x4 reduced density matrix for qubits 0 and 1 by tracing out qubits >= 2
+    int dim = 4;
+    result.resize(dim);
+    for (int i = 0; i < dim; ++i) {
+      result[i].resize(dim);
+      for (int j = 0; j < dim; ++j) {
+        result[i][j] = QComplex(0.0, 0.0);
+      }
+    }
+    int restDim = 1 << (n - 2);
+    for (int r = 0; r < restDim; ++r) {
+      int restBits = r << 2;
+      for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+          std::complex<double> val = sv(restBits | i) * std::conj(sv(restBits | j));
+          result[i][j] = QComplex(result[i][j].real() + val.real(), result[i][j].imag() + val.imag());
+        }
+      }
+    }
   }
   return result;
 }
 
 double CoreInterface::getQubitProbability(int qubit, int value) const {
-  if (!validateQubitIndex(qubit) || !qubitStates_.contains(qubit)) {
+  if (!validateQubitIndex(qubit) || !currentState_) {
     return 0.0;
   }
-
-  const QVector<double> &state = qubitStates_[qubit];
-  if (value == 0) {
-    return state[0]; // P(|0⟩)
-  } else {
-    return state[1]; // P(|1⟩)
-  }
+  return currentState_->getQubitProbability(qubit, value);
 }
 
 double CoreInterface::getQubitExpectation(int qubit,
                                           const QString &observable) const {
-  if (!validateQubitIndex(qubit) || !qubitStates_.contains(qubit)) {
+  if (!currentState_ || qubit < 0 || qubit >= currentState_->getNumQubits()) {
     return 0.0;
   }
 
-  const QVector<double> &state = qubitStates_[qubit];
+  int n = currentState_->getNumQubits();
+  int dim = 1 << n;
+  VectorXcd sv = currentState_->getStateVector();
+
   if (observable == "Z") {
-    return state[0] - state[1]; // ⟨Z⟩ = P(|0⟩) - P(|1⟩)
-  } else if (observable == "X") {
-    return 2 * sqrt(state[0] * state[1]) * cos(state[5]); // ⟨X⟩
+    double expZ = 0.0;
+    for (int i = 0; i < dim; ++i) {
+      double p = std::norm(sv(i));
+      if (((i >> qubit) & 1) == 0) {
+        expZ += p;
+      } else {
+        expZ -= p;
+      }
+    }
+    return expZ;
+  }
+
+  std::complex<double> offDiag = 0.0;
+  for (int i = 0; i < dim; ++i) {
+    if (((i >> qubit) & 1) == 0) {
+      int j = i | (1 << qubit);
+      offDiag += std::conj(sv(i)) * sv(j);
+    }
+  }
+
+  if (observable == "X") {
+    return 2.0 * offDiag.real();
   } else if (observable == "Y") {
-    return 2 * sqrt(state[0] * state[1]) * sin(state[5]); // ⟨Y⟩
+    return -2.0 * offDiag.imag();
   }
 
   return 0.0;
@@ -212,6 +305,74 @@ QVector<double> CoreInterface::getQubitState(int qubit) const {
     return qubitStates_[qubit];
   }
   return QVector<double>();
+}
+
+QVector<CoreInterface::QubitStepTrajectory>
+CoreInterface::getQubitTrajectory(int qubit) const {
+  QVector<QubitStepTrajectory> trajectory;
+  if (!circuit_ || !currentState_)
+    return trajectory;
+
+  int numQubits = circuit_->getNumQubits();
+  if (qubit < 0 || qubit >= numQubits)
+    return trajectory;
+
+  // Clone circuit and state to simulate trajectory without disturbing current execution
+  omniq::QuantumCircuit simCircuit(*circuit_);
+  omniq::QuantumState simState(numQubits);
+  simCircuit.reset();
+  simState.reset();
+
+  auto computeParams =
+      [&](const omniq::QuantumState &st) -> std::tuple<double, double, double> {
+    int dim = 1 << numQubits;
+    VectorXcd sv = st.getStateVector();
+    double prob0 = 0.0;
+    double prob1 = 0.0;
+    std::complex<double> rho01 = 0.0;
+    for (int i = 0; i < dim; ++i) {
+      if (((i >> qubit) & 1) == 0) {
+        int partner = i | (1 << qubit);
+        prob0 += std::norm(sv(i));
+        rho01 += sv(i) * std::conj(sv(partner));
+      } else {
+        prob1 += std::norm(sv(i));
+      }
+    }
+    double rx = 2.0 * rho01.real();
+    double ry = -2.0 * rho01.imag();
+    double rz = prob0 - prob1;
+    double r = std::sqrt(rx * rx + ry * ry + rz * rz);
+    double theta = 0.0;
+    double phi = 0.0;
+    if (r > 1e-12) {
+      theta = std::acos(std::clamp(rz / r, -1.0, 1.0));
+      phi = std::atan2(ry, rx);
+    }
+    return {theta, phi, r};
+  };
+
+  // Step 0: Initial state |0⟩
+  auto [t0, p0, r0] = computeParams(simState);
+  trajectory.append({0, "Init", t0, p0, r0});
+
+  // Steps 1..totalSteps
+  const auto &gates = simCircuit.getGates();
+  int stepIdx = 1;
+  for (const auto &g : gates) {
+    simCircuit.executeStep(simState);
+    auto [th, ph, r_val] = computeParams(simState);
+    QString gateName = gateTypeToString(std::get<0>(g));
+    int q1 = std::get<1>(g);
+    int q2 = std::get<2>(g);
+    QString label = gateName;
+    if (q1 != qubit && q2 != qubit) {
+      label = QString("(%1)").arg(gateName);
+    }
+    trajectory.append({stepIdx++, label, th, ph, r_val});
+  }
+
+  return trajectory;
 }
 
 QVector<int> CoreInterface::measureQubit(int qubit, int count,
@@ -245,27 +406,53 @@ QVector<double> CoreInterface::getQubitExpectationValues(int qubit) const {
 }
 
 double CoreInterface::getQubitPurity(int qubit) const {
-  if (!validateQubitIndex(qubit) || !qubitStates_.contains(qubit)) {
+  if (!currentState_ || qubit < 0 || qubit >= currentState_->getNumQubits()) {
     return 0.0;
   }
 
-  const QVector<double> &state = qubitStates_[qubit];
-  return state[0] * state[0] + state[1] * state[1];
+  int n = currentState_->getNumQubits();
+  int dim = 1 << n;
+  VectorXcd sv = currentState_->getStateVector();
+  double rho00 = 0.0, rho11 = 0.0;
+  std::complex<double> rho01 = 0.0;
+
+  for (int i = 0; i < dim; ++i) {
+    if (((i >> qubit) & 1) == 0) {
+      int partner = i | (1 << qubit);
+      rho00 += std::norm(sv(i));
+      rho01 += sv(i) * std::conj(sv(partner));
+    } else {
+      rho11 += std::norm(sv(i));
+    }
+  }
+
+  double purity = (rho00 * rho00) + (rho11 * rho11) + 2.0 * std::norm(rho01);
+  return std::clamp(purity, 0.5, 1.0);
 }
 
 double CoreInterface::getQubitCoherence(int qubit) const {
-  if (!validateQubitIndex(qubit) || !qubitStates_.contains(qubit)) {
+  if (!currentState_ || qubit < 0 || qubit >= currentState_->getNumQubits()) {
     return 0.0;
   }
 
-  const QVector<double> &state = qubitStates_[qubit];
-  return 2 * sqrt(state[0] * state[1]);
+  int n = currentState_->getNumQubits();
+  int dim = 1 << n;
+  VectorXcd sv = currentState_->getStateVector();
+  std::complex<double> rho01 = 0.0;
+
+  for (int i = 0; i < dim; ++i) {
+    if (((i >> qubit) & 1) == 0) {
+      int partner = i | (1 << qubit);
+      rho01 += sv(i) * std::conj(sv(partner));
+    }
+  }
+
+  return 2.0 * std::abs(rho01);
 }
 
 QMap<QString, double>
 CoreInterface::getQubitEntanglementMeasures(int qubit) const {
   QMap<QString, double> measures;
-  // Simplified entanglement measures for single qubit
   measures["Purity"] = getQubitPurity(qubit);
   measures["Coherence"] = getQubitCoherence(qubit);
   return measures;
@@ -319,14 +506,28 @@ QVector<double> CoreInterface::performStateTomography() const {
 QVector<double>
 CoreInterface::getStateExpectationValues(const QString &observable) const {
   QVector<double> expectations;
-  if (observable == "X") {
-    expectations = {0.5, 0.5, 0.0, 0.0};
-  } else if (observable == "Y") {
-    expectations = {0.0, 0.0, 0.5, 0.5};
-  } else if (observable == "Z") {
-    expectations = {0.5, 0.0, 0.0, 0.5};
+  if (!currentState_) return expectations;
+  int numQubits = currentState_->getNumQubits();
+  for (int q = 0; q < numQubits; ++q) {
+    expectations.append(getQubitExpectation(q, observable));
   }
   return expectations;
+}
+
+QVector<CoreInterface::GateItem> CoreInterface::getCircuitGates() const {
+  QVector<GateItem> result;
+  if (!circuit_) return result;
+  const auto &gates = circuit_->getGates();
+  for (size_t i = 0; i < gates.size(); ++i) {
+    GateItem item;
+    item.step = static_cast<int>(i);
+    item.type = gateTypeToString(std::get<0>(gates[i]));
+    item.qubit1 = std::get<1>(gates[i]);
+    item.qubit2 = std::get<2>(gates[i]);
+    item.parameter = std::get<3>(gates[i]);
+    result.append(item);
+  }
+  return result;
 }
 
 int CoreInterface::getCircuitDepth() const { return totalSteps_; }
@@ -339,17 +540,26 @@ int CoreInterface::getCurrentStep() const { return currentStep_; }
 
 QStringList CoreInterface::getGateInfo(int step) const {
   QStringList info;
-  if (!validateStepIndex(step)) {
+  if (!circuit_ || step < 0 || step >= circuit_->getTotalSteps()) {
     return info;
   }
 
-  if (step == 1) {
-    info << "Gate type: H";
-    info << "Qubits: 0";
-    info << "Parameters: []";
-  } else if (step == 2) {
-    info << "Gate type: CNOT";
-    info << "Qubits: 0, 1";
+  const auto &gates = circuit_->getGates();
+  const auto &gate = gates[step];
+  omniq::GateType type = std::get<0>(gate);
+  int q1 = std::get<1>(gate);
+  int q2 = std::get<2>(gate);
+  double param = std::get<3>(gate);
+
+  info << QString("Gate type: %1").arg(gateTypeToString(type));
+  if (q2 == -1) {
+    info << QString("Qubits: %1").arg(q1);
+  } else {
+    info << QString("Qubits: %1, %2").arg(q1).arg(q2);
+  }
+  if (param != 0.0) {
+    info << QString("Parameters: [%1]").arg(param, 0, 'f', 4);
+  } else {
     info << "Parameters: []";
   }
 
@@ -358,17 +568,41 @@ QStringList CoreInterface::getGateInfo(int step) const {
 
 bool CoreInterface::addGate(const QString &gateType, const QVector<int> &qubits,
                             const QVector<double> &parameters) {
-  totalSteps_++;
-  emit circuitChanged();
-  return true;
-}
-
-bool CoreInterface::removeGate(int step) {
-  if (!validateStepIndex(step)) {
+  if (!circuit_ || qubits.isEmpty()) {
     return false;
   }
 
-  totalSteps_--;
+  try {
+    omniq::GateType type = stringToGateType(gateType);
+    double param = parameters.isEmpty() ? 0.0 : parameters[0];
+
+    if (type == omniq::GateType::CNOT || type == omniq::GateType::SWAP || type == omniq::GateType::CP) {
+      if (qubits.size() < 2) return false;
+      circuit_->addGate(type, qubits[0], qubits[1], param);
+    } else {
+      circuit_->addGate(type, qubits[0], param);
+    }
+
+    totalSteps_ = circuit_->getTotalSteps();
+    emit circuitChanged();
+    return true;
+  } catch (const std::exception &e) {
+    lastError_ = QString("Failed to add gate: %1").arg(e.what());
+    emit errorOccurred(lastError_);
+    return false;
+  }
+}
+
+bool CoreInterface::removeGate(int step) {
+  if (!circuit_ || step < 0 || step >= circuit_->getTotalSteps()) {
+    return false;
+  }
+
+  circuit_->removeGate(step);
+  totalSteps_ = circuit_->getTotalSteps();
+  if (currentStep_ > totalSteps_) {
+    currentStep_ = totalSteps_;
+  }
   emit circuitChanged();
   return true;
 }
@@ -376,18 +610,12 @@ bool CoreInterface::removeGate(int step) {
 bool CoreInterface::insertGate(int step, const QString &gateType,
                                const QVector<int> &qubits,
                                const QVector<double> &parameters) {
-  if (!validateStepIndex(step)) {
-    return false;
-  }
-
-  totalSteps_++;
-  emit circuitChanged();
-  return true;
+  Q_UNUSED(step);
+  return addGate(gateType, qubits, parameters);
 }
 
 bool CoreInterface::optimizeCircuit() {
-  // Simulate optimization
-  totalSteps_ = qMax(1, totalSteps_ - 1);
+  // Circuit optimization placeholder
   emit circuitChanged();
   return true;
 }
@@ -401,12 +629,25 @@ QStringList CoreInterface::getOptimizationSuggestions() const {
 
 QJsonObject CoreInterface::exportCircuit() const {
   QJsonObject circuitData;
-  circuitData["num_qubits"] = qubitStates_.size();
+  int numQubits = currentState_ ? currentState_->getNumQubits() : 2;
+  circuitData["num_qubits"] = numQubits;
   circuitData["num_classical_bits"] = 0;
   circuitData["depth"] = getCircuitDepth();
   circuitData["gate_count"] = getGateCount();
 
   QJsonArray gates;
+  if (circuit_) {
+    for (const auto &gate : circuit_->getGates()) {
+      QJsonObject gateObj;
+      gateObj["type"] = gateTypeToString(std::get<0>(gate));
+      gateObj["qubit"] = std::get<1>(gate);
+      if (std::get<2>(gate) != -1) {
+        gateObj["target"] = std::get<2>(gate);
+      }
+      gateObj["parameter"] = std::get<3>(gate);
+      gates.append(gateObj);
+    }
+  }
   circuitData["gates"] = gates;
 
   return circuitData;
@@ -484,24 +725,40 @@ void CoreInterface::updateQubitStates() {
   }
 
   int numQubits = currentState_->getNumQubits();
+  int dim = 1 << numQubits;
+  VectorXcd sv = currentState_->getStateVector();
   qubitStates_.clear();
 
   for (int qubit = 0; qubit < numQubits; ++qubit) {
-    // Get probabilities for |0⟩ and |1⟩ states
-    double prob0 = currentState_->getQubitProbability(qubit, 0);
-    double prob1 = currentState_->getQubitProbability(qubit, 1);
+    double prob0 = 0.0;
+    double prob1 = 0.0;
+    std::complex<double> rho01 = 0.0;
 
-    // Get amplitudes
+    for (int i = 0; i < dim; ++i) {
+      if (((i >> qubit) & 1) == 0) {
+        int partner = i | (1 << qubit);
+        prob0 += std::norm(sv(i));
+        rho01 += sv(i) * std::conj(sv(partner));
+      } else {
+        prob1 += std::norm(sv(i));
+      }
+    }
+
+    // Single qubit Bloch coordinates
+    double rx = 2.0 * rho01.real();
+    double ry = -2.0 * rho01.imag();
+    double rz = prob0 - prob1;
+    double r = std::sqrt(rx * rx + ry * ry + rz * rz);
+
+    double theta = 0.0;
+    double phi = 0.0;
+    if (r > 1e-12) {
+      theta = std::acos(std::clamp(rz / r, -1.0, 1.0));
+      phi = std::atan2(ry, rx);
+    }
+
     std::complex<double> amp0 = currentState_->getQubitAmplitude(qubit, 0);
     std::complex<double> amp1 = currentState_->getQubitAmplitude(qubit, 1);
-
-    // Calculate Bloch sphere parameters with safety check to avoid NaN
-    double clamped_prob0 = std::clamp(prob0, 0.0, 1.0);
-    double theta = 2.0 * std::acos(std::sqrt(clamped_prob0));
-
-    double phase0 = std::arg(amp0);
-    double phase1 = std::arg(amp1);
-    double phi = phase1 - phase0;
 
     QVector<double> state = {
         prob0,       prob1,       // Probabilities
@@ -515,7 +772,7 @@ void CoreInterface::updateQubitStates() {
 }
 
 void CoreInterface::updateEntanglementMeasures() {
-  // Simplified implementation
+  entanglementMeasures_ = calculateEntanglementMeasures();
 }
 
 bool CoreInterface::validateQubitIndex(int qubit) const {
@@ -598,32 +855,115 @@ QVector<double> CoreInterface::calculateExpectationValues(int qubit) const {
 }
 
 double CoreInterface::calculatePurity() const {
-  return 1.0; // Simplified: assume pure state
+  return 1.0;
 }
 
 double CoreInterface::calculateFidelity(
     const QVector<std::complex<double>> &targetState) const {
-  return 0.95; // Simplified: assume high fidelity
+  if (!currentState_) return 0.0;
+  VectorXcd sv = currentState_->getStateVector();
+  if (targetState.size() != sv.size()) return 0.0;
+
+  std::complex<double> dot = 0.0;
+  for (int i = 0; i < sv.size(); ++i) {
+    dot += std::conj(targetState[i]) * sv(i);
+  }
+  return std::clamp(std::norm(dot), 0.0, 1.0);
 }
 
 double CoreInterface::calculateVonNeumannEntropy() const {
-  return 0.0; // Simplified: assume pure state
+  if (!currentState_) return 0.0;
+  int n = currentState_->getNumQubits();
+  if (n < 2) return 0.0;
+
+  int dim = 1 << n;
+  VectorXcd sv = currentState_->getStateVector();
+  double rho00 = 0.0;
+  std::complex<double> rho01 = 0.0;
+  for (int i = 0; i < dim; ++i) {
+    if ((i & 1) == 0) {
+      rho00 += std::norm(sv(i));
+      rho01 += sv(i) * std::conj(sv(i | 1));
+    }
+  }
+  double rho11 = 1.0 - rho00;
+  double det = rho00 * rho11 - std::norm(rho01);
+  det = std::max(0.0, det);
+  double disc = std::sqrt(std::max(0.0, 1.0 - 4.0 * det));
+  double lambda1 = std::clamp((1.0 + disc) / 2.0, 0.0, 1.0);
+  double lambda2 = std::clamp((1.0 - disc) / 2.0, 0.0, 1.0);
+
+  double entropy = 0.0;
+  if (lambda1 > 1e-12) entropy -= lambda1 * std::log2(lambda1);
+  if (lambda2 > 1e-12) entropy -= lambda2 * std::log2(lambda2);
+  return entropy;
 }
 
 double CoreInterface::calculateCoherence() const {
-  return 0.8; // Simplified: assume some coherence
+  if (!currentState_) return 0.0;
+  VectorXcd sv = currentState_->getStateVector();
+  double l1Coherence = 0.0;
+  for (int i = 0; i < sv.size(); ++i) {
+    for (int j = 0; j < sv.size(); ++j) {
+      if (i != j) {
+        l1Coherence += std::abs(sv(i) * std::conj(sv(j)));
+      }
+    }
+  }
+  return l1Coherence;
 }
 
 QMap<QString, double> CoreInterface::calculateEntanglementMeasures() const {
   QMap<QString, double> measures;
-  measures["Concurrence"] = 0.5;
-  measures["Negativity"] = 0.3;
-  measures["Von Neumann"] = 0.7;
-  measures["Tangle"] = 0.25;
+  if (!currentState_) {
+    measures["Concurrence"] = 0.0;
+    measures["Negativity"] = 0.0;
+    measures["Von Neumann"] = 0.0;
+    measures["Tangle"] = 0.0;
+    return measures;
+  }
+
+  int n = currentState_->getNumQubits();
+  if (n < 2) {
+    measures["Concurrence"] = 0.0;
+    measures["Negativity"] = 0.0;
+    measures["Von Neumann"] = 0.0;
+    measures["Tangle"] = 0.0;
+    return measures;
+  }
+
+  int dim = 1 << n;
+  VectorXcd sv = currentState_->getStateVector();
+  double rho00 = 0.0;
+  std::complex<double> rho01 = 0.0;
+  for (int i = 0; i < dim; ++i) {
+    if ((i & 1) == 0) {
+      rho00 += std::norm(sv(i));
+      rho01 += sv(i) * std::conj(sv(i | 1));
+    }
+  }
+  double rho11 = 1.0 - rho00;
+  double det = std::max(0.0, rho00 * rho11 - std::norm(rho01));
+  double concurrence = std::clamp(2.0 * std::sqrt(det), 0.0, 1.0);
+  double tangle = concurrence * concurrence;
+  double negativity = concurrence / 2.0;
+  double entropy = calculateVonNeumannEntropy();
+
+  measures["Concurrence"] = concurrence;
+  measures["Negativity"] = negativity;
+  measures["Von Neumann"] = entropy;
+  measures["Tangle"] = tangle;
   return measures;
 }
 
 QVector<double> CoreInterface::performTomography() const {
-  QVector<double> tomographyData = {0.5, 0.5, 0.7, 0.3, 0.6, 0.4};
+  QVector<double> tomographyData;
+  if (!currentState_) return tomographyData;
+  int numQubits = currentState_->getNumQubits();
+  for (int q = 0; q < numQubits; ++q) {
+    tomographyData.append(getQubitExpectation(q, "X"));
+    tomographyData.append(getQubitExpectation(q, "Y"));
+    tomographyData.append(getQubitExpectation(q, "Z"));
+  }
   return tomographyData;
 }

@@ -26,16 +26,30 @@ double calculateFidelity(const VectorXcd &state1, const VectorXcd &state2) {
   return std::norm(overlap);
 }
 
+// Helper to compute square root of a positive semi-definite matrix
+MatrixXcd matrixSqrt(const MatrixXcd &mat) {
+  Eigen::SelfAdjointEigenSolver<MatrixXcd> solver(mat);
+  Eigen::VectorXd eigenvalues = solver.eigenvalues();
+  for (int i = 0; i < eigenvalues.size(); ++i) {
+    if (eigenvalues(i) < 0.0) eigenvalues(i) = 0.0;
+  }
+  Eigen::VectorXd sqrtEigenvalues = eigenvalues.cwiseSqrt();
+  return solver.eigenvectors() * sqrtEigenvalues.asDiagonal() *
+         solver.eigenvectors().adjoint();
+}
+
 double calculateFidelity(const MatrixXcd &rho1, const MatrixXcd &rho2) {
   if (rho1.rows() != rho2.rows() || rho1.cols() != rho2.cols()) {
     throw std::invalid_argument(
         "Density matrices must have the same dimensions");
   }
 
-  // Calculate Fidelity = Tr(sqrt(sqrt(rho1) * rho2 * sqrt(rho1)))
-  // For simplicity, we use a more direct approach
-  MatrixXcd product = rho1 * rho2;
-  return std::sqrt(std::abs(product.trace()));
+  // Uhlmann Fidelity: F(rho1, rho2) = (Tr(sqrt(sqrt(rho1) * rho2 * sqrt(rho1))))^2
+  MatrixXcd sqrtRho1 = matrixSqrt(rho1);
+  MatrixXcd inside = sqrtRho1 * rho2 * sqrtRho1;
+  MatrixXcd sqrtInside = matrixSqrt(inside);
+  double traceVal = std::max(0.0, sqrtInside.trace().real());
+  return traceVal * traceVal;
 }
 
 double calculateVonNeumannEntropy(const MatrixXcd &densityMatrix) {
@@ -52,16 +66,6 @@ double calculateVonNeumannEntropy(const MatrixXcd &densityMatrix) {
   }
 
   return entropy;
-}
-
-// Helper to compute square root of a positive semi-definite matrix
-MatrixXcd matrixSqrt(const MatrixXcd &mat) {
-  Eigen::SelfAdjointEigenSolver<MatrixXcd> solver(mat);
-  // Eigenvalues of Hermitian matrix are real
-  Eigen::VectorXd eigenvalues = solver.eigenvalues();
-  Eigen::VectorXd sqrtEigenvalues = eigenvalues.cwiseSqrt();
-  return solver.eigenvectors() * sqrtEigenvalues.asDiagonal() *
-         solver.eigenvectors().adjoint();
 }
 
 double calculateConcurrence(const MatrixXcd &densityMatrix) {

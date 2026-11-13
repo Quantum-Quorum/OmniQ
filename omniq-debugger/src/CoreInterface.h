@@ -63,8 +63,14 @@ public:
   void addGate(GateType type, int control, int target, double parameter = 0.0);
   bool executeStep(QuantumState &state);
   void reset();
+  void clear();
+  void removeGate(int index);
+  int getNumQubits() const { return numQubits_; }
   int getCurrentStep() const { return currentStep_; }
   int getTotalSteps() const { return static_cast<int>(gates_.size()); }
+  const std::vector<std::tuple<GateType, int, int, double>> &getGates() const {
+    return gates_;
+  }
   std::string getGateDescription(int step) const;
 };
 } // namespace omniq
@@ -139,10 +145,29 @@ public:
   QVector<double> performStateTomography() const;
   QVector<double> getStateExpectationValues(const QString &observable) const;
 
+  struct GateItem {
+    int step;
+    QString type;
+    int qubit1;
+    int qubit2;
+    double parameter;
+  };
+  QVector<GateItem> getCircuitGates() const;
+
+  struct QubitStepTrajectory {
+    int step;
+    QString gateName;
+    double theta;
+    double phi;
+    double r;
+  };
+  QVector<QubitStepTrajectory> getQubitTrajectory(int qubit) const;
+
   int getCircuitDepth() const;
   int getGateCount() const;
   int getTotalSteps() const;
   int getCurrentStep() const;
+  int getNumQubits() const { return circuit_ ? circuit_->getNumQubits() : 2; }
   QStringList getGateInfo(int step) const;
 
   bool addGate(const QString &gateType, const QVector<int> &qubits,

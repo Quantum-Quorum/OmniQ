@@ -101,6 +101,8 @@ template <> constexpr inline auto QuantumStateViewer::qt_create_metaobjectdata<q
         "animateToggled",
         "",
         "active",
+        "setViewMode",
+        "mode",
         "updateState",
         "stateString",
         "updateStateVector",
@@ -116,7 +118,6 @@ template <> constexpr inline auto QuantumStateViewer::qt_create_metaobjectdata<q
         "QList<double>",
         "tomographyData",
         "onViewModeChanged",
-        "mode",
         "onBasisChanged",
         "basis",
         "onAnimateClicked",
@@ -130,42 +131,46 @@ template <> constexpr inline auto QuantumStateViewer::qt_create_metaobjectdata<q
         QtMocHelpers::SignalData<void(bool)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
             { QMetaType::Bool, 3 },
         }}),
-        // Slot 'updateState'
+        // Slot 'setViewMode'
         QtMocHelpers::SlotData<void(const QString &)>(4, 2, QMC::AccessPublic, QMetaType::Void, {{
             { QMetaType::QString, 5 },
         }}),
+        // Slot 'updateState'
+        QtMocHelpers::SlotData<void(const QString &)>(6, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::QString, 7 },
+        }}),
         // Slot 'updateStateVector'
-        QtMocHelpers::SlotData<void(const QVector<std::complex<double>> &)>(6, 2, QMC::AccessPublic, QMetaType::Void, {{
-            { 0x80000000 | 7, 8 },
+        QtMocHelpers::SlotData<void(const QVector<std::complex<double>> &)>(8, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { 0x80000000 | 9, 10 },
         }}),
         // Slot 'updateDensityMatrix'
-        QtMocHelpers::SlotData<void(const QVector<QVector<std::complex<double>> > &)>(9, 2, QMC::AccessPublic, QMetaType::Void, {{
-            { 0x80000000 | 10, 11 },
+        QtMocHelpers::SlotData<void(const QVector<QVector<std::complex<double>> > &)>(11, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { 0x80000000 | 12, 13 },
         }}),
         // Slot 'updateEntanglementMeasures'
-        QtMocHelpers::SlotData<void(const QMap<QString,double> &)>(12, 2, QMC::AccessPublic, QMetaType::Void, {{
-            { 0x80000000 | 13, 14 },
+        QtMocHelpers::SlotData<void(const QMap<QString,double> &)>(14, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { 0x80000000 | 15, 16 },
         }}),
         // Slot 'updateTomographyData'
-        QtMocHelpers::SlotData<void(const QVector<double> &)>(15, 2, QMC::AccessPublic, QMetaType::Void, {{
-            { 0x80000000 | 16, 17 },
+        QtMocHelpers::SlotData<void(const QVector<double> &)>(17, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { 0x80000000 | 18, 19 },
         }}),
         // Slot 'onViewModeChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(18, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 19 },
+        QtMocHelpers::SlotData<void(const QString &)>(20, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 5 },
         }}),
         // Slot 'onBasisChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(20, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 21 },
+        QtMocHelpers::SlotData<void(const QString &)>(21, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 22 },
         }}),
         // Slot 'onAnimateClicked'
-        QtMocHelpers::SlotData<void()>(22, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onCalculateEntanglement'
         QtMocHelpers::SlotData<void()>(23, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onPerformTomography'
+        // Slot 'onCalculateEntanglement'
         QtMocHelpers::SlotData<void()>(24, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onExportState'
+        // Slot 'onPerformTomography'
         QtMocHelpers::SlotData<void()>(25, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onExportState'
+        QtMocHelpers::SlotData<void()>(26, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -190,24 +195,25 @@ void QuantumStateViewer::qt_static_metacall(QObject *_o, QMetaObject::Call _c, i
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
         case 0: _t->animateToggled((*reinterpret_cast< std::add_pointer_t<bool>>(_a[1]))); break;
-        case 1: _t->updateState((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 2: _t->updateStateVector((*reinterpret_cast< std::add_pointer_t<QList<std::complex<double>>>>(_a[1]))); break;
-        case 3: _t->updateDensityMatrix((*reinterpret_cast< std::add_pointer_t<QList<QList<std::complex<double>>>>>(_a[1]))); break;
-        case 4: _t->updateEntanglementMeasures((*reinterpret_cast< std::add_pointer_t<QMap<QString,double>>>(_a[1]))); break;
-        case 5: _t->updateTomographyData((*reinterpret_cast< std::add_pointer_t<QList<double>>>(_a[1]))); break;
-        case 6: _t->onViewModeChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 7: _t->onBasisChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 8: _t->onAnimateClicked(); break;
-        case 9: _t->onCalculateEntanglement(); break;
-        case 10: _t->onPerformTomography(); break;
-        case 11: _t->onExportState(); break;
+        case 1: _t->setViewMode((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 2: _t->updateState((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 3: _t->updateStateVector((*reinterpret_cast< std::add_pointer_t<QList<std::complex<double>>>>(_a[1]))); break;
+        case 4: _t->updateDensityMatrix((*reinterpret_cast< std::add_pointer_t<QList<QList<std::complex<double>>>>>(_a[1]))); break;
+        case 5: _t->updateEntanglementMeasures((*reinterpret_cast< std::add_pointer_t<QMap<QString,double>>>(_a[1]))); break;
+        case 6: _t->updateTomographyData((*reinterpret_cast< std::add_pointer_t<QList<double>>>(_a[1]))); break;
+        case 7: _t->onViewModeChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 8: _t->onBasisChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 9: _t->onAnimateClicked(); break;
+        case 10: _t->onCalculateEntanglement(); break;
+        case 11: _t->onPerformTomography(); break;
+        case 12: _t->onExportState(); break;
         default: ;
         }
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
         switch (_id) {
         default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
-        case 5:
+        case 6:
             switch (*reinterpret_cast<int*>(_a[1])) {
             default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
             case 0:
@@ -241,14 +247,14 @@ int QuantumStateViewer::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 12)
+        if (_id < 13)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 12;
+        _id -= 13;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 12)
+        if (_id < 13)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 12;
+        _id -= 13;
     }
     return _id;
 }

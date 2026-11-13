@@ -122,6 +122,7 @@ void CircuitBuilder::setupCircuitView() {
   circuitView_ = new QGraphicsView(circuitScene_);
   circuitView_->setAcceptDrops(true);
   circuitView_->setRenderHint(QPainter::Antialiasing);
+  circuitView_->setMinimumSize(180, 150);
 
   circuitScene_->setSceneRect(0, 0, 400, 300);
 

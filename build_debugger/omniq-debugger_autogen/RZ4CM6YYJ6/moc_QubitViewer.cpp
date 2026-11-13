@@ -41,9 +41,11 @@ template <> constexpr inline auto QubitViewer::qt_create_metaobjectdata<qt_meta_
     namespace QMC = QtMocConstants;
     QtMocHelpers::StringRefStorage qt_stringData {
         "QubitViewer",
-        "updateQubitInfo",
+        "qubitSelectionChanged",
         "",
         "qubit",
+        "setSelectedQubit",
+        "updateQubitInfo",
         "prob0",
         "prob1",
         "alpha",
@@ -67,53 +69,61 @@ template <> constexpr inline auto QubitViewer::qt_create_metaobjectdata<qt_meta_
     };
 
     QtMocHelpers::UintData qt_methods {
-        // Slot 'updateQubitInfo'
-        QtMocHelpers::SlotData<void(int, double, double, double, double, double, double)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
-            { QMetaType::Int, 3 }, { QMetaType::Double, 4 }, { QMetaType::Double, 5 }, { QMetaType::Double, 6 },
-            { QMetaType::Double, 7 }, { QMetaType::Double, 8 }, { QMetaType::Double, 9 },
+        // Signal 'qubitSelectionChanged'
+        QtMocHelpers::SignalData<void(int)>(1, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 3 },
+        }}),
+        // Slot 'setSelectedQubit'
+        QtMocHelpers::SlotData<void(int)>(4, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 3 },
         }}),
         // Slot 'updateQubitInfo'
-        QtMocHelpers::SlotData<void(int, double, double, double, double, double)>(1, 2, QMC::AccessPublic | QMC::MethodCloned, QMetaType::Void, {{
-            { QMetaType::Int, 3 }, { QMetaType::Double, 4 }, { QMetaType::Double, 5 }, { QMetaType::Double, 6 },
-            { QMetaType::Double, 7 }, { QMetaType::Double, 8 },
+        QtMocHelpers::SlotData<void(int, double, double, double, double, double, double)>(5, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 3 }, { QMetaType::Double, 6 }, { QMetaType::Double, 7 }, { QMetaType::Double, 8 },
+            { QMetaType::Double, 9 }, { QMetaType::Double, 10 }, { QMetaType::Double, 11 },
         }}),
         // Slot 'updateQubitInfo'
-        QtMocHelpers::SlotData<void(int, double, double, double, double)>(1, 2, QMC::AccessPublic | QMC::MethodCloned, QMetaType::Void, {{
-            { QMetaType::Int, 3 }, { QMetaType::Double, 4 }, { QMetaType::Double, 5 }, { QMetaType::Double, 6 },
-            { QMetaType::Double, 7 },
+        QtMocHelpers::SlotData<void(int, double, double, double, double, double)>(5, 2, QMC::AccessPublic | QMC::MethodCloned, QMetaType::Void, {{
+            { QMetaType::Int, 3 }, { QMetaType::Double, 6 }, { QMetaType::Double, 7 }, { QMetaType::Double, 8 },
+            { QMetaType::Double, 9 }, { QMetaType::Double, 10 },
         }}),
         // Slot 'updateQubitInfo'
-        QtMocHelpers::SlotData<void(int, double, double, double)>(1, 2, QMC::AccessPublic | QMC::MethodCloned, QMetaType::Void, {{
-            { QMetaType::Int, 3 }, { QMetaType::Double, 4 }, { QMetaType::Double, 5 }, { QMetaType::Double, 6 },
+        QtMocHelpers::SlotData<void(int, double, double, double, double)>(5, 2, QMC::AccessPublic | QMC::MethodCloned, QMetaType::Void, {{
+            { QMetaType::Int, 3 }, { QMetaType::Double, 6 }, { QMetaType::Double, 7 }, { QMetaType::Double, 8 },
+            { QMetaType::Double, 9 },
         }}),
         // Slot 'updateQubitInfo'
-        QtMocHelpers::SlotData<void(int, double, double)>(1, 2, QMC::AccessPublic | QMC::MethodCloned, QMetaType::Void, {{
-            { QMetaType::Int, 3 }, { QMetaType::Double, 4 }, { QMetaType::Double, 5 },
+        QtMocHelpers::SlotData<void(int, double, double, double)>(5, 2, QMC::AccessPublic | QMC::MethodCloned, QMetaType::Void, {{
+            { QMetaType::Int, 3 }, { QMetaType::Double, 6 }, { QMetaType::Double, 7 }, { QMetaType::Double, 8 },
+        }}),
+        // Slot 'updateQubitInfo'
+        QtMocHelpers::SlotData<void(int, double, double)>(5, 2, QMC::AccessPublic | QMC::MethodCloned, QMetaType::Void, {{
+            { QMetaType::Int, 3 }, { QMetaType::Double, 6 }, { QMetaType::Double, 7 },
         }}),
         // Slot 'updateMeasurementResults'
-        QtMocHelpers::SlotData<void(int, const QVector<int> &)>(10, 2, QMC::AccessPublic, QMetaType::Void, {{
-            { QMetaType::Int, 3 }, { 0x80000000 | 11, 12 },
+        QtMocHelpers::SlotData<void(int, const QVector<int> &)>(12, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 3 }, { 0x80000000 | 13, 14 },
         }}),
         // Slot 'updateExpectationValues'
-        QtMocHelpers::SlotData<void(int, double, double, double)>(13, 2, QMC::AccessPublic, QMetaType::Void, {{
-            { QMetaType::Int, 3 }, { QMetaType::Double, 14 }, { QMetaType::Double, 15 }, { QMetaType::Double, 16 },
+        QtMocHelpers::SlotData<void(int, double, double, double)>(15, 2, QMC::AccessPublic, QMetaType::Void, {{
+            { QMetaType::Int, 3 }, { QMetaType::Double, 16 }, { QMetaType::Double, 17 }, { QMetaType::Double, 18 },
         }}),
         // Slot 'resetQubitData'
-        QtMocHelpers::SlotData<void()>(17, 2, QMC::AccessPublic, QMetaType::Void),
+        QtMocHelpers::SlotData<void()>(19, 2, QMC::AccessPublic, QMetaType::Void),
         // Slot 'onQubitSelected'
-        QtMocHelpers::SlotData<void(int)>(18, 2, QMC::AccessPrivate, QMetaType::Void, {{
+        QtMocHelpers::SlotData<void(int)>(20, 2, QMC::AccessPrivate, QMetaType::Void, {{
             { QMetaType::Int, 3 },
         }}),
         // Slot 'onMeasurementBasisChanged'
-        QtMocHelpers::SlotData<void(const QString &)>(19, 2, QMC::AccessPrivate, QMetaType::Void, {{
-            { QMetaType::QString, 20 },
+        QtMocHelpers::SlotData<void(const QString &)>(21, 2, QMC::AccessPrivate, QMetaType::Void, {{
+            { QMetaType::QString, 22 },
         }}),
         // Slot 'onMeasureButtonClicked'
-        QtMocHelpers::SlotData<void()>(21, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onResetButtonClicked'
-        QtMocHelpers::SlotData<void()>(22, 2, QMC::AccessPrivate, QMetaType::Void),
-        // Slot 'onAnimateState'
         QtMocHelpers::SlotData<void()>(23, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onResetButtonClicked'
+        QtMocHelpers::SlotData<void()>(24, 2, QMC::AccessPrivate, QMetaType::Void),
+        // Slot 'onAnimateState'
+        QtMocHelpers::SlotData<void()>(25, 2, QMC::AccessPrivate, QMetaType::Void),
     };
     QtMocHelpers::UintData qt_properties {
     };
@@ -137,26 +147,28 @@ void QubitViewer::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
     auto *_t = static_cast<QubitViewer *>(_o);
     if (_c == QMetaObject::InvokeMetaMethod) {
         switch (_id) {
-        case 0: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[5])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[6])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[7]))); break;
-        case 1: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[5])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[6]))); break;
-        case 2: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[5]))); break;
-        case 3: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4]))); break;
-        case 4: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3]))); break;
-        case 5: _t->updateMeasurementResults((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QList<int>>>(_a[2]))); break;
-        case 6: _t->updateExpectationValues((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4]))); break;
-        case 7: _t->resetQubitData(); break;
-        case 8: _t->onQubitSelected((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
-        case 9: _t->onMeasurementBasisChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
-        case 10: _t->onMeasureButtonClicked(); break;
-        case 11: _t->onResetButtonClicked(); break;
-        case 12: _t->onAnimateState(); break;
+        case 0: _t->qubitSelectionChanged((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 1: _t->setSelectedQubit((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 2: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[5])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[6])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[7]))); break;
+        case 3: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[5])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[6]))); break;
+        case 4: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[5]))); break;
+        case 5: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4]))); break;
+        case 6: _t->updateQubitInfo((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3]))); break;
+        case 7: _t->updateMeasurementResults((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<QList<int>>>(_a[2]))); break;
+        case 8: _t->updateExpectationValues((*reinterpret_cast< std::add_pointer_t<int>>(_a[1])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[2])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[3])),(*reinterpret_cast< std::add_pointer_t<double>>(_a[4]))); break;
+        case 9: _t->resetQubitData(); break;
+        case 10: _t->onQubitSelected((*reinterpret_cast< std::add_pointer_t<int>>(_a[1]))); break;
+        case 11: _t->onMeasurementBasisChanged((*reinterpret_cast< std::add_pointer_t<QString>>(_a[1]))); break;
+        case 12: _t->onMeasureButtonClicked(); break;
+        case 13: _t->onResetButtonClicked(); break;
+        case 14: _t->onAnimateState(); break;
         default: ;
         }
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
         switch (_id) {
         default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
-        case 5:
+        case 7:
             switch (*reinterpret_cast<int*>(_a[1])) {
             default: *reinterpret_cast<QMetaType *>(_a[0]) = QMetaType(); break;
             case 1:
@@ -164,6 +176,10 @@ void QubitViewer::qt_static_metacall(QObject *_o, QMetaObject::Call _c, int _id,
             }
             break;
         }
+    }
+    if (_c == QMetaObject::IndexOfMethod) {
+        if (QtMocHelpers::indexOfMethod<void (QubitViewer::*)(int )>(_a, &QubitViewer::qubitSelectionChanged, 0))
+            return;
     }
 }
 
@@ -186,15 +202,21 @@ int QubitViewer::qt_metacall(QMetaObject::Call _c, int _id, void **_a)
     if (_id < 0)
         return _id;
     if (_c == QMetaObject::InvokeMetaMethod) {
-        if (_id < 13)
+        if (_id < 15)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 13;
+        _id -= 15;
     }
     if (_c == QMetaObject::RegisterMethodArgumentMetaType) {
-        if (_id < 13)
+        if (_id < 15)
             qt_static_metacall(this, _c, _id, _a);
-        _id -= 13;
+        _id -= 15;
     }
     return _id;
+}
+
+// SIGNAL 0
+void QubitViewer::qubitSelectionChanged(int _t1)
+{
+    QMetaObject::activate<void>(this, &staticMetaObject, 0, nullptr, _t1);
 }
 QT_WARNING_POP

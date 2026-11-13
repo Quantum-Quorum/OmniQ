@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <iomanip>
+#include <random>
 
 namespace omniq {
 
@@ -96,14 +97,16 @@ void QuditStatevector::applyCustomSingleQuditOp(int qudit, const Eigen::MatrixXc
 
 void QuditStatevector::applyAharonovCasherRZ(int qudit, double theta) {
     validateQuditIndex(qudit);
-    
-    // RZ(theta) for qudit level m: diag(exp(-i * m * theta))
-    Eigen::MatrixXcd rzMat = Eigen::MatrixXcd::Zero(dimension_, dimension_);
+    int totalDim = static_cast<int>(stateVector_.size());
+    int stride = static_cast<int>(std::pow(dimension_, numQudits_ - 1 - qudit));
+    std::vector<std::complex<double>> phases(dimension_);
     for (int m = 0; m < dimension_; ++m) {
-        rzMat(m, m) = std::exp(std::complex<double>(0, -m * theta));
+        phases[m] = std::exp(std::complex<double>(0, -m * theta));
     }
-    
-    applyCustomSingleQuditOp(qudit, rzMat);
+    for (int idx = 0; idx < totalDim; ++idx) {
+        int m = (idx / stride) % dimension_;
+        stateVector_(idx) *= phases[m];
+    }
 }
 
 void QuditStatevector::applyCSUM(int controlQudit, int targetQudit) {
@@ -142,22 +145,17 @@ void QuditStatevector::applyControlledPhase(int controlQudit, int targetQudit, d
     }
 
     int totalDim = static_cast<int>(stateVector_.size());
-    std::vector<Eigen::Triplet<std::complex<double>>> triplets;
-
     int cStride = static_cast<int>(std::pow(dimension_, numQudits_ - 1 - controlQudit));
     int tStride = static_cast<int>(std::pow(dimension_, numQudits_ - 1 - targetQudit));
 
     for (int idx = 0; idx < totalDim; ++idx) {
         int cVal = (idx / cStride) % dimension_;
         int tVal = (idx / tStride) % dimension_;
-        
-        std::complex<double> pVal = std::exp(std::complex<double>(0.0, cVal * tVal * phase));
-        triplets.emplace_back(idx, idx, pVal);
+        if (cVal > 0 && tVal > 0) {
+            std::complex<double> pVal = std::exp(std::complex<double>(0.0, cVal * tVal * phase));
+            stateVector_(idx) *= pVal;
+        }
     }
-
-    SparseMatrixXcd mat(totalDim, totalDim);
-    mat.setFromTriplets(triplets.begin(), triplets.end());
-    stateVector_ = mat * stateVector_;
 }
 
 double QuditStatevector::getQuditStateProbability(int qudit, int stateLevel) const {
@@ -183,14 +181,31 @@ double QuditStatevector::getQuditStateProbability(int qudit, int stateLevel) con
 int QuditStatevector::measure(int qudit) {
     validateQuditIndex(qudit);
     
-    // For deterministic simulation in unit tests, select level with max probability
-    int maxLevel = 0;
-    double maxProb = -1.0;
+    std::vector<double> probs(dimension_, 0.0);
+    double total = 0.0;
     for (int l = 0; l < dimension_; ++l) {
-        double p = getQuditStateProbability(qudit, l);
-        if (p > maxProb) {
-            maxProb = p;
-            maxLevel = l;
+        probs[l] = getQuditStateProbability(qudit, l);
+        total += probs[l];
+    }
+    if (total > 1e-12) {
+        for (int l = 0; l < dimension_; ++l) {
+            probs[l] /= total;
+        }
+    } else {
+        probs[0] = 1.0;
+    }
+
+    // Sample state level based on Born's rule
+    static thread_local std::mt19937_64 rng(std::random_device{}());
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    double r = dist(rng);
+    int sampledLevel = dimension_ - 1;
+    double cumulative = 0.0;
+    for (int l = 0; l < dimension_; ++l) {
+        cumulative += probs[l];
+        if (r <= cumulative) {
+            sampledLevel = l;
+            break;
         }
     }
 
@@ -200,13 +215,13 @@ int QuditStatevector::measure(int qudit) {
 
     for (int idx = 0; idx < totalDim; ++idx) {
         int val = (idx / stride) % dimension_;
-        if (val != maxLevel) {
+        if (val != sampledLevel) {
             stateVector_(idx) = 0.0;
         }
     }
     normalize();
 
-    return maxLevel;
+    return sampledLevel;
 }
 
 std::string QuditStatevector::toString() const {

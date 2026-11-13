@@ -34,6 +34,9 @@ public:
   void setStateVector(const QVector<std::complex<double>> &state);
   void setBasisLabels(const QStringList &labels);
 
+  QSize sizeHint() const override { return QSize(260, 260); }
+  QSize minimumSizeHint() const override { return QSize(150, 150); }
+
 protected:
   void paintEvent(QPaintEvent *event) override;
   void mousePressEvent(QMouseEvent *event) override;

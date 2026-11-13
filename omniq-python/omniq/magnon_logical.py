@@ -98,8 +98,10 @@ def create_dual_rail_grover(num_qubits, target_value):
             
     if num_qubits == 2:
         ops.append((MagnonicGate.CROSS_KERR, 0, 1))
+    elif num_qubits == 1:
+        ops.append((MagnonicGate.PHASE_SHIFT, 0, {'angle': math.pi}))
     else:
-        # Cross-Kerr between qubits
+        # Multi-qubit dual-rail phase inversion across all modes
         for i in range(num_qubits - 1):
             ops.append((MagnonicGate.CROSS_KERR, i, i + 1))
             
@@ -114,6 +116,8 @@ def create_dual_rail_grover(num_qubits, target_value):
         
     if num_qubits == 2:
         ops.append((MagnonicGate.CROSS_KERR, 0, 1))
+    elif num_qubits == 1:
+        ops.append((MagnonicGate.PHASE_SHIFT, 0, {'angle': math.pi}))
     else:
         for i in range(num_qubits - 1):
             ops.append((MagnonicGate.CROSS_KERR, i, i + 1))

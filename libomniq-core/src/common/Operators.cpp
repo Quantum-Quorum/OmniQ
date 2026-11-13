@@ -211,21 +211,30 @@ double Operators::trace(const MatrixXcd& matrix) {
 }
 
 MatrixXcd Operators::partialTrace(const MatrixXcd& matrix, int qubit, int totalQubits) {
-    if (qubit >= totalQubits) {
+    if (qubit < 0 || qubit >= totalQubits) {
         throw std::invalid_argument("Qubit index out of range");
     }
     
     int dim = matrix.rows();
-    int dimPerQubit = static_cast<int>(std::pow(2, totalQubits - 1));
-    MatrixXcd result = MatrixXcd::Zero(dimPerQubit, dimPerQubit);
+    int dimReduced = static_cast<int>(std::pow(2, totalQubits - 1));
+    if (dim != (1 << totalQubits)) {
+        throw std::invalid_argument("Matrix dimension does not match total qubits");
+    }
+    MatrixXcd result = MatrixXcd::Zero(dimReduced, dimReduced);
+    
+    int maskLow = (1 << qubit) - 1;
     
     // Perform partial trace over the specified qubit
-    for (int i = 0; i < dimPerQubit; ++i) {
-        for (int j = 0; j < dimPerQubit; ++j) {
+    for (int i = 0; i < dimReduced; ++i) {
+        int iLow = i & maskLow;
+        int iHigh = (i >> qubit) << (qubit + 1);
+        for (int j = 0; j < dimReduced; ++j) {
+            int jLow = j & maskLow;
+            int jHigh = (j >> qubit) << (qubit + 1);
             std::complex<double> sum(0, 0);
             for (int k = 0; k < 2; ++k) {
-                int row = i + k * dimPerQubit;
-                int col = j + k * dimPerQubit;
+                int row = iHigh | (k << qubit) | iLow;
+                int col = jHigh | (k << qubit) | jLow;
                 sum += matrix(row, col);
             }
             result(i, j) = sum;

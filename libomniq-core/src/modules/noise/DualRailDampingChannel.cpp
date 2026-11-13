@@ -47,6 +47,12 @@ std::vector<MatrixXcd> DualRailDampingChannel::getKrausOperators() const {
     K2(2, 3) = std::sqrt(gamma_ * (1.0 - gamma_));
     kraus.push_back(K2);
 
+    // K_3: Simultaneous decay from both rails (|1,1> -> |0,0>)
+    // Ensures trace preservation: K0^dag K0 + K1^dag K1 + K2^dag K2 + K3^dag K3 = I
+    MatrixXcd K3 = MatrixXcd::Zero(4, 4);
+    K3(0, 3) = gamma_;
+    kraus.push_back(K3);
+
     return kraus;
 }
 

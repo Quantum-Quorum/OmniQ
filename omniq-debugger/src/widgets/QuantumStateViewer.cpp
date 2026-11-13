@@ -30,7 +30,8 @@
 DensityMatrixWidget::DensityMatrixWidget(QWidget *parent)
     : QWidget(parent), showDensityMatrix_(true), selectedRow_(-1),
       selectedCol_(-1) {
-  setMinimumSize(300, 300);
+  setMinimumSize(150, 150);
+  setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
   setMouseTracking(true);
 }
 
@@ -97,10 +98,19 @@ void DensityMatrixWidget::drawMatrix(QPainter &painter) {
       painter.setPen(QPen(Qt::black, 1));
       painter.drawRect(cellRect);
 
-      // Draw value
-      QString value = formatComplexNumber(densityMatrix_[i][j]);
-      painter.setPen(Qt::black);
-      painter.drawText(cellRect, Qt::AlignCenter, value);
+      // Draw value if cell is large enough
+      if (cellSize >= 55) {
+        QString value = formatComplexNumber(densityMatrix_[i][j]);
+        painter.setPen(color.lightness() > 130 ? Qt::black : Qt::white);
+        painter.drawText(cellRect, Qt::AlignCenter, value);
+      } else if (cellSize >= 28) {
+        double mag = std::abs(densityMatrix_[i][j]);
+        if (mag > 1e-4) {
+          painter.setPen(color.lightness() > 130 ? Qt::black : Qt::white);
+          painter.setFont(QFont("Arial", 8));
+          painter.drawText(cellRect, Qt::AlignCenter, QString::number(mag, 'f', 2));
+        }
+      }
     }
   }
 }
@@ -140,7 +150,8 @@ void DensityMatrixWidget::drawStateVector(QPainter &painter) {
     if (!basisLabels_.isEmpty() && i < basisLabels_.size()) {
       basis = basisLabels_[i];
     } else {
-      basis = QString("|%1⟩").arg(i, 0, 2);
+      int numQubits = static_cast<int>(std::round(std::log2(std::max(1, size))));
+      basis = QString("|%1⟩").arg(i, numQubits, 2, QChar('0'));
     }
 
     painter.setPen(Qt::black);
@@ -159,12 +170,14 @@ void DensityMatrixWidget::drawBasisLabels(QPainter &painter) {
     int startX = (width() - size * cellSize) / 2;
     int startY = (height() - size * cellSize) / 2;
 
+    int numQubits = static_cast<int>(std::round(std::log2(std::max(1, size))));
+
     // Column labels
     for (int j = 0; j < size; ++j) {
       int x = startX + j * cellSize;
       QString label = (!basisLabels_.isEmpty() && j < basisLabels_.size())
                           ? basisLabels_[j]
-                          : QString("|%1⟩").arg(j);
+                          : QString("|%1⟩").arg(j, numQubits, 2, QChar('0'));
       painter.drawText(x, startY - 20, cellSize, 20, Qt::AlignCenter, label);
     }
 
@@ -173,9 +186,9 @@ void DensityMatrixWidget::drawBasisLabels(QPainter &painter) {
       int y = startY + i * cellSize;
       QString label = (!basisLabels_.isEmpty() && i < basisLabels_.size())
                           ? basisLabels_[i]
-                          : QString("⟨%1|").arg(i);
+                          : QString("⟨%1|").arg(i, numQubits, 2, QChar('0'));
       painter.drawText(startX - 30, y, 30, cellSize, Qt::AlignCenter,
-                       label); // Simplified <x| label logic
+                       label);
     }
   }
 }
@@ -240,8 +253,8 @@ QuantumStateViewer::~QuantumStateViewer() {}
 
 QSize QuantumStateViewer::sizeHint() const {
   // Base size for tables and controls
-  int width = 800;
-  int height = 600;
+  int width = 420;
+  int height = 650;
 
   // If we have a large state vector, increase suggested size
   if (stateVector_.size() > 16) {
@@ -347,6 +360,7 @@ void QuantumStateViewer::setupUI() {
   propertiesTable_->setColumnCount(2);
   propertiesTable_->setHorizontalHeaderLabels({"Property", "Value"});
   propertiesTable_->horizontalHeader()->setStretchLastSection(true);
+  propertiesTable_->setMaximumHeight(130);
   propsLayout->addWidget(propertiesTable_);
 
   // Property labels
@@ -400,6 +414,7 @@ void QuantumStateViewer::setupUI() {
   entanglementTable_->setHorizontalHeaderLabels(
       {"Measure", "Value", "Description"});
   entanglementTable_->horizontalHeader()->setStretchLastSection(true);
+  entanglementTable_->setMaximumHeight(130);
   entLayout->addWidget(entanglementTable_);
 
   mainLayout->addWidget(entanglementGroup_);
@@ -430,6 +445,7 @@ void QuantumStateViewer::setupUI() {
   tomographyTable_->setHorizontalHeaderLabels(
       {"Measurement", "Expected", "Observed", "Error"});
   tomographyTable_->horizontalHeader()->setStretchLastSection(true);
+  tomographyTable_->setMaximumHeight(130);
   tomLayout->addWidget(tomographyTable_);
 
   mainLayout->addWidget(tomographyGroup_);
@@ -778,10 +794,11 @@ void QuantumStateViewer::updateStateDisplay() {
   QString basis = basisSelector_->currentText();
   QVector<std::complex<double>> displayVector = getStateInBasis(basis);
 
+  int numQubits = static_cast<int>(std::round(std::log2(std::max(1, static_cast<int>(displayVector.size())))));
   QString displayText = "State Vector (" + basis + " Basis):\n";
   for (int i = 0; i < displayVector.size(); ++i) {
     displayText += QString("|%1⟩: %2\n")
-                       .arg(i, 0, 2)
+                       .arg(i, numQubits, 2, QChar('0'))
                        .arg(formatComplexNumber(displayVector[i]));
   }
   stateTextEdit_->setText(displayText);

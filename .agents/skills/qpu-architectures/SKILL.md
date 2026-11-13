@@ -89,3 +89,4 @@ Because of the **Quantum No-Cloning Theorem**, quantum states cannot be swapped 
 * **Device Nodes**: `/dev/accel/qpuX` (character device) and `/dev/accel/qpuX_dma` (DMA ring).
 * **System Telemetry**: `/sys/class/accel/qpuX/` exposing physical topology, $T_1/T_2$ times, and cryogenic temperatures.
 * **Management Utility**: `qpu-smi` providing real-time ASCII dashboards, per-qubit health matrices, and partition inspection.
+

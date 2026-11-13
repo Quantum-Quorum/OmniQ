@@ -339,3 +339,4 @@ std::vector<PartitionDescriptor> QMMU::getAllActivePartitions() const {
 
 } // namespace qos
 } // namespace omniq
+

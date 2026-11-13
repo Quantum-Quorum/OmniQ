@@ -186,3 +186,4 @@ struct qpu_result_req {
 #define QPU_IOCTL_READ_RESULTS      _IOWR(QPU_IOCTL_MAGIC, 0x06, struct qpu_result_req)
 
 #endif /* _UAPI_LINUX_QPU_H */
+

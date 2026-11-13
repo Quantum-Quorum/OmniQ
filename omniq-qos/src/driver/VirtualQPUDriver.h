@@ -65,3 +65,4 @@ private:
 } // namespace omniq
 
 #endif /* _OMNIQ_VIRTUAL_QPU_DRIVER_H */
+

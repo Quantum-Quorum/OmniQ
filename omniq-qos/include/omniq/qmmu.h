@@ -104,3 +104,4 @@ private:
 } // namespace omniq
 
 #endif /* _OMNIQ_QMMU_H */
+

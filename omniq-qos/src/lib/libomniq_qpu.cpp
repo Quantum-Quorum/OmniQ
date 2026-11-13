@@ -268,3 +268,4 @@ const char *qpu_tech_name(uint32_t tech) {
 }
 
 } // extern "C"
+

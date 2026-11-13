@@ -173,3 +173,4 @@ int main(int argc, char *argv[]) {
     std::cout << "[DAEMON] Partitions freed and qubits returned to pool. Shutting down cleanly.\n";
     return 0;
 }
+

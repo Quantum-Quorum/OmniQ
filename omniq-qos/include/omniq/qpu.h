@@ -102,3 +102,4 @@ const char *qpu_tech_name(uint32_t tech);
 #endif
 
 #endif /* _OMNIQ_QPU_H */
+

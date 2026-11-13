@@ -375,6 +375,216 @@ CoreInterface::getQubitTrajectory(int qubit) const {
   return trajectory;
 }
 
+Eigen::Matrix4cd
+CoreInterface::getTwoQubitReducedDensityMatrix(int qA, int qB) const {
+  Eigen::Matrix4cd rho = Eigen::Matrix4cd::Zero();
+  if (!currentState_ || qA == qB)
+    return rho;
+
+  int n = currentState_->getNumQubits();
+  if (qA < 0 || qA >= n || qB < 0 || qB >= n)
+    return rho;
+
+  int dim = 1 << n;
+  VectorXcd sv = currentState_->getStateVector();
+
+  for (int m = 0; m < dim; ++m) {
+    int bA = (m >> qA) & 1;
+    int bB = (m >> qB) & 1;
+    int r = (bA << 1) | bB;
+
+    for (int bA_prime = 0; bA_prime < 2; ++bA_prime) {
+      for (int bB_prime = 0; bB_prime < 2; ++bB_prime) {
+        int c = (bA_prime << 1) | bB_prime;
+        int m_prime = m;
+        if (bA != bA_prime)
+          m_prime ^= (1 << qA);
+        if (bB != bB_prime)
+          m_prime ^= (1 << qB);
+
+        rho(r, c) += sv(m) * std::conj(sv(m_prime));
+      }
+    }
+  }
+
+  return rho;
+}
+
+CoreInterface::BipartiteEntanglement
+CoreInterface::calculateBipartiteEntanglement(int qA, int qB) const {
+  BipartiteEntanglement res = {qA, qB, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, false};
+  if (!currentState_ || qA == qB)
+    return res;
+
+  Eigen::Matrix4cd rho = getTwoQubitReducedDensityMatrix(qA, qB);
+
+  // 1. Wootters Concurrence
+  // Spin-flip matrix S = sigma_y \otimes sigma_y
+  Eigen::Matrix4cd S = Eigen::Matrix4cd::Zero();
+  S(0, 3) = -1.0;
+  S(1, 2) = 1.0;
+  S(2, 1) = 1.0;
+  S(3, 0) = -1.0;
+
+  Eigen::Matrix4cd rhoTilde = S * rho.conjugate() * S;
+  Eigen::Matrix4cd M = rho * rhoTilde;
+
+  Eigen::ComplexEigenSolver<Eigen::Matrix4cd> solver(M);
+  std::vector<double> lambdas;
+  for (int i = 0; i < 4; ++i) {
+    double re = solver.eigenvalues()(i).real();
+    lambdas.push_back(std::sqrt(std::max(0.0, re)));
+  }
+  std::sort(lambdas.rbegin(), lambdas.rend());
+
+  double concurrence = std::clamp(
+      lambdas[0] - lambdas[1] - lambdas[2] - lambdas[3], 0.0, 1.0);
+  double tangle = concurrence * concurrence;
+
+  // 2. Peres-Horodecki Negativity (partial transpose of qubit B)
+  Eigen::Matrix4cd rhoTB = rho;
+  for (int r = 0; r < 4; ++r) {
+    for (int c = 0; c < 4; ++c) {
+      int rA = (r >> 1) & 1, rB = r & 1;
+      int cA = (c >> 1) & 1, cB = c & 1;
+      int rTrans = (rA << 1) | cB;
+      int cTrans = (cA << 1) | rB;
+      rhoTB(r, c) = rho(rTrans, cTrans);
+    }
+  }
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix4cd> tbSolver(rhoTB);
+  double negativity = 0.0;
+  for (int i = 0; i < 4; ++i) {
+    double val = tbSolver.eigenvalues()(i);
+    if (val < 0.0) {
+      negativity += -val;
+    }
+  }
+  negativity = std::clamp(negativity, 0.0, 0.5);
+
+  // 3. Bell basis overlaps
+  double fPhiPlus = 0.5 * (rho(0, 0).real() + rho(3, 3).real() + 2.0 * rho(0, 3).real());
+  double fPhiMinus = 0.5 * (rho(0, 0).real() + rho(3, 3).real() - 2.0 * rho(0, 3).real());
+  double fPsiPlus = 0.5 * (rho(1, 1).real() + rho(2, 2).real() + 2.0 * rho(1, 2).real());
+  double fPsiMinus = 0.5 * (rho(1, 1).real() + rho(2, 2).real() - 2.0 * rho(1, 2).real());
+
+  // 4. Quantum Mutual Information I(A:B) = S(A) + S(B) - S(AB)
+  auto calcEntropy = [](const Eigen::VectorXd &eigs) {
+    double s = 0.0;
+    for (int i = 0; i < eigs.size(); ++i) {
+      double p = eigs(i);
+      if (p > 1e-12) {
+        s -= p * std::log2(p);
+      }
+    }
+    return s;
+  };
+
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix4cd> rhoSolver(rho);
+  double sAB = calcEntropy(rhoSolver.eigenvalues());
+
+  Eigen::Matrix2cd rhoA = Eigen::Matrix2cd::Zero();
+  rhoA(0, 0) = rho(0, 0) + rho(1, 1);
+  rhoA(0, 1) = rho(0, 2) + rho(1, 3);
+  rhoA(1, 0) = rho(2, 0) + rho(3, 1);
+  rhoA(1, 1) = rho(2, 2) + rho(3, 3);
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix2cd> solverA(rhoA);
+  double sA = calcEntropy(solverA.eigenvalues());
+
+  Eigen::Matrix2cd rhoB = Eigen::Matrix2cd::Zero();
+  rhoB(0, 0) = rho(0, 0) + rho(2, 2);
+  rhoB(0, 1) = rho(0, 1) + rho(2, 3);
+  rhoB(1, 0) = rho(1, 0) + rho(3, 2);
+  rhoB(1, 1) = rho(1, 1) + rho(3, 3);
+  Eigen::SelfAdjointEigenSolver<Eigen::Matrix2cd> solverB(rhoB);
+  double sB = calcEntropy(solverB.eigenvalues());
+
+  double mutualInfo = std::max(0.0, sA + sB - sAB);
+
+  res.concurrence = concurrence;
+  res.tangle = tangle;
+  res.negativity = negativity;
+  res.mutualInformation = mutualInfo;
+  res.bellPhiPlus = std::clamp(fPhiPlus, 0.0, 1.0);
+  res.bellPhiMinus = std::clamp(fPhiMinus, 0.0, 1.0);
+  res.bellPsiPlus = std::clamp(fPsiPlus, 0.0, 1.0);
+  res.bellPsiMinus = std::clamp(fPsiMinus, 0.0, 1.0);
+  res.isEntangled = (concurrence > 0.01 || negativity > 0.005);
+
+  return res;
+}
+
+QVector<CoreInterface::QubitSuperpositionInfo>
+CoreInterface::getQubitSuperpositionList() const {
+  QVector<QubitSuperpositionInfo> list;
+  if (!currentState_)
+    return list;
+
+  int n = currentState_->getNumQubits();
+  for (int q = 0; q < n; ++q) {
+    QVector<double> qs = getQubitState(q);
+    if (qs.size() >= 6) {
+      double p0 = qs[0];
+      double p1 = qs[1];
+      std::complex<double> a(qs[2], qs[3]);
+      std::complex<double> b(qs[4], qs[5]);
+
+      double supDeg = 4.0 * p0 * p1; // 1.0 for equal superposition, 0.0 for pure basis state
+      double phase = std::arg(b) - std::arg(a);
+      while (phase < 0.0) phase += 2.0 * M_PI;
+      while (phase >= 2.0 * M_PI) phase -= 2.0 * M_PI;
+      double phaseDeg = phase * 180.0 / M_PI;
+
+      bool isSuper = (supDeg > 0.01);
+      list.append({q, p0, p1, supDeg, phaseDeg, a, b, isSuper});
+    }
+  }
+  return list;
+}
+
+QVector<CoreInterface::BasisStateComponent>
+CoreInterface::getActiveSuperpositionComponents(double threshold) const {
+  QVector<BasisStateComponent> comps;
+  if (!currentState_)
+    return comps;
+
+  int n = currentState_->getNumQubits();
+  int dim = 1 << n;
+  VectorXcd sv = currentState_->getStateVector();
+
+  for (int i = 0; i < dim; ++i) {
+    double prob = std::norm(sv(i));
+    if (prob >= threshold) {
+      QString binStr = QString::number(i, 2).rightJustified(n, '0');
+      double phase = std::arg(sv(i));
+      while (phase < 0.0) phase += 2.0 * M_PI;
+      while (phase >= 2.0 * M_PI) phase -= 2.0 * M_PI;
+      double phaseDeg = phase * 180.0 / M_PI;
+
+      comps.append({i, binStr, prob, phaseDeg, sv(i)});
+    }
+  }
+  return comps;
+}
+
+QVector<CoreInterface::EntanglementLinkInfo>
+CoreInterface::getAllEntanglementLinks(double threshold) const {
+  QVector<EntanglementLinkInfo> links;
+  if (!currentState_)
+    return links;
+
+  int n = currentState_->getNumQubits();
+  for (int i = 0; i < n; ++i) {
+    for (int j = i + 1; j < n; ++j) {
+      auto be = calculateBipartiteEntanglement(i, j);
+      if (be.concurrence >= threshold) {
+        links.append({i, j, be.concurrence});
+      }
+    }
+  }
+  return links;
+}
+
 QVector<int> CoreInterface::measureQubit(int qubit, int count,
                                          const QString &basis) const {
   QVector<int> results;

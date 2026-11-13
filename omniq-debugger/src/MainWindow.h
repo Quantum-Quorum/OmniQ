@@ -11,6 +11,7 @@
 #include "widgets/CircuitView.h"
 #include "widgets/QuantumStateViewer.h"
 #include "widgets/QubitViewer.h"
+#include "widgets/EntanglementViewer.h"
 #include <QComboBox>
 #include <QDockWidget>
 #include <QFileDialog>
@@ -83,6 +84,7 @@ private:
   QDockWidget *qubitDock;
   QDockWidget *outputDock;
   QDockWidget *blochDock;
+  QDockWidget *entanglementDock;
   QComboBox *blochQubitCombo_;
   QPushButton *blochRunBtn_;
   int activeBlochQubit_;
@@ -130,6 +132,7 @@ private:
   QubitViewer *qubitViewer;
   CircuitBuilder *circuitBuilder;
   BlochSphereWidget *blochSphereWidget;
+  EntanglementViewer *entanglementViewer;
 
   // ... (rest of UI components)
 

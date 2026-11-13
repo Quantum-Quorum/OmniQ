@@ -1,6 +1,5 @@
 build/
-build_debugger/dummy_*
-build_debugger/*.app/
+build_debugger/
 libomniq-core/build_*/
 dist/
 *.egg-info/

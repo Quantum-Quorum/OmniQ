@@ -719,15 +719,15 @@ QuantumStateViewer::getStateInBasis(const QString &basis) const {
 }
 
 void QuantumStateViewer::onCalculateEntanglement() {
-  // Simulate entanglement calculation
-  QMap<QString, double> measures;
-  measures["Concurrence"] = 0.5;
-  measures["Negativity"] = 0.3;
-  measures["Von Neumann"] = 0.7;
-  measures["Tangle"] = 0.25;
+  if (entanglementMeasures_.isEmpty() || !entanglementMeasures_.contains("Concurrence")) {
+    entanglementMeasures_["Concurrence"] = 0.0;
+    entanglementMeasures_["Negativity"] = 0.0;
+    entanglementMeasures_["Von Neumann"] = 0.0;
+    entanglementMeasures_["Tangle"] = 0.0;
+  }
 
-  updateEntanglementMeasures(measures);
-  entanglementBar_->setValue(static_cast<int>(measures["Concurrence"] * 100));
+  updateEntanglementMeasures(entanglementMeasures_);
+  entanglementBar_->setValue(static_cast<int>(entanglementMeasures_.value("Concurrence", 0.0) * 100));
 
   // Update 3D Graph
   int numQubits = 0;
@@ -739,16 +739,10 @@ void QuantumStateViewer::onCalculateEntanglement() {
 
   entanglementGraph_->setNumQubits(numQubits);
 
-  // Create some dummy links for visualization based on the "calculated"
-  // measures
   QVector<EntanglementLink> links;
-  if (numQubits >= 2) {
-    // Link qubit 0 and 1 strongly
-    links.append({0, 1, measures["Concurrence"]});
-    // Link others weakly if they exist
-    for (int i = 1; i < numQubits - 1; ++i) {
-      links.append({i, i + 1, 0.1});
-    }
+  double c = entanglementMeasures_.value("Concurrence", 0.0);
+  if (numQubits >= 2 && c > 0.001) {
+    links.append({0, 1, c});
   }
   entanglementGraph_->setEntanglementData(links);
 }

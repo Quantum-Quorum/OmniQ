@@ -36,7 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), mainSplitter(nullptr), circuitView(nullptr),
       stateViewer(nullptr), qubitViewer(nullptr), circuitDock(nullptr),
       stateDock(nullptr), qubitDock(nullptr), outputDock(nullptr),
-      blochDock(nullptr), blochQubitCombo_(nullptr), blochRunBtn_(nullptr),
+      blochDock(nullptr), entanglementDock(nullptr), blochQubitCombo_(nullptr), blochRunBtn_(nullptr),
       activeBlochQubit_(0), debugToolBar(nullptr), stepForwardBtn(nullptr), stepBackwardBtn(nullptr),
       runBtn(nullptr), pauseBtn(nullptr), resetBtn(nullptr),
       stepSpinBox(nullptr), speedComboBox(nullptr), progressBar(nullptr),
@@ -142,6 +142,7 @@ void MainWindow::setupUI() {
   qubitViewer = new QubitViewer(this);
   circuitBuilder = new CircuitBuilder(this);
   blochSphereWidget = new BlochSphereWidget(this);
+  entanglementViewer = new EntanglementViewer(coreInterface, this);
 
   qDebug() << "MainWindow UI components initialized";
 }
@@ -182,6 +183,8 @@ void MainWindow::setupMenus() {
     viewMenu->addAction(stateDock->toggleViewAction());
   if (blochDock)
     viewMenu->addAction(blochDock->toggleViewAction());
+  if (entanglementDock)
+    viewMenu->addAction(entanglementDock->toggleViewAction());
   if (outputDock)
     viewMenu->addAction(outputDock->toggleViewAction());
   viewMenu->addSeparator();
@@ -386,7 +389,26 @@ void MainWindow::setupDockWidgets() {
   blochDock->setTitleBarWidget(blochHeader);
   blochDock->setWidget(blochSphereWidget);
 
-  // 5. Output dock
+  // 5. Entanglement & Superposition Dock
+  entanglementDock = new QDockWidget("⚡ Entanglement & Superposition", this);
+  entanglementDock->setObjectName("entanglementDock");
+  QWidget *entHeader = new QWidget();
+  QHBoxLayout *entHeaderLayout = new QHBoxLayout(entHeader);
+  entHeaderLayout->setContentsMargins(6, 4, 6, 4);
+  QLabel *entTitle = new QLabel("⚡ Entanglement & Superposition", entHeader);
+  entTitle->setStyleSheet("font-weight: bold; font-size: 12px; color: #00e5ff;");
+  entHeaderLayout->addWidget(entTitle);
+  entHeaderLayout->addStretch();
+  entHeaderLayout->addWidget(createInfoIcon(
+      "<b>Quantum Entanglement & Superposition Analyzer</b><br/>"
+      "• <b>Bipartite Entanglement</b>: Wootters concurrence C, negativity N, tangle τ, and mutual info I(A:B).<br/>"
+      "• <b>Bell Basis Tomography</b>: Overlap with |Φ⁺⟩, |Φ⁻⟩, |Ψ⁺⟩, |Ψ⁻⟩.<br/>"
+      "• <b>Network Constellation</b>: Visual laser links between entangled qubits.<br/>"
+      "• <b>Superposition Inspector</b>: Per-qubit degree 4·P0·P1, relative phase φ, and active computational basis states."));
+  entanglementDock->setTitleBarWidget(entHeader);
+  entanglementDock->setWidget(makeScrollableDock(entanglementViewer, this));
+
+  // 6. Output dock
   outputDock = new QDockWidget("Output", this);
   outputDock->setObjectName("outputDock");
   outputConsole_ = new QTextEdit(this);
@@ -404,10 +426,12 @@ void MainWindow::setupDockWidgets() {
   tabifyDockWidget(circuitDock, qubitDock);
   circuitDock->raise();
 
-  // Right: Tabify State Analyzer & 3D Bloch Sphere
+  // Right: Tabify State Analyzer, 3D Bloch Sphere, & Entanglement Viewer
   addDockWidget(Qt::RightDockWidgetArea, stateDock);
   addDockWidget(Qt::RightDockWidgetArea, blochDock);
+  addDockWidget(Qt::RightDockWidgetArea, entanglementDock);
   tabifyDockWidget(stateDock, blochDock);
+  tabifyDockWidget(blochDock, entanglementDock);
   stateDock->raise();
 
   // Bottom: Output Console
@@ -641,6 +665,12 @@ void MainWindow::updateStateDisplays() {
 
   // Update Density Matrix if applicable
   stateViewer->updateDensityMatrix(coreInterface->getDensityMatrixComplex());
+  stateViewer->updateEntanglementMeasures(coreInterface->getEntanglementMeasures());
+
+  // Update Entanglement & Superposition Viewer
+  if (entanglementViewer) {
+    entanglementViewer->updateView();
+  }
 
   // Update Qubit Viewer for all qubits in circuit
   int numQubits = coreInterface->getNumQubits();
@@ -929,16 +959,19 @@ void MainWindow::resetDockLayout() {
 
   addDockWidget(Qt::RightDockWidgetArea, stateDock);
   addDockWidget(Qt::RightDockWidgetArea, blochDock);
+  addDockWidget(Qt::RightDockWidgetArea, entanglementDock);
   tabifyDockWidget(stateDock, blochDock);
+  tabifyDockWidget(blochDock, entanglementDock);
   stateDock->show();
   blochDock->show();
+  entanglementDock->show();
   stateDock->raise();
 
   addDockWidget(Qt::BottomDockWidgetArea, outputDock);
   outputDock->show();
 
   resizeDocks({circuitDock, qubitDock}, {340, 340}, Qt::Horizontal);
-  resizeDocks({stateDock, blochDock}, {440, 440}, Qt::Horizontal);
+  resizeDocks({stateDock, blochDock, entanglementDock}, {440, 440, 440}, Qt::Horizontal);
   statusBar()->showMessage("Layout reset to default", 2500);
 }
 

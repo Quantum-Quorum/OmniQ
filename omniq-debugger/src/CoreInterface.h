@@ -163,6 +163,52 @@ public:
   };
   QVector<QubitStepTrajectory> getQubitTrajectory(int qubit) const;
 
+  struct BipartiteEntanglement {
+    int qubitA;
+    int qubitB;
+    double concurrence;
+    double tangle;
+    double negativity;
+    double mutualInformation;
+    double bellPhiPlus;
+    double bellPhiMinus;
+    double bellPsiPlus;
+    double bellPsiMinus;
+    bool isEntangled;
+  };
+  BipartiteEntanglement calculateBipartiteEntanglement(int qA, int qB) const;
+  Eigen::Matrix4cd getTwoQubitReducedDensityMatrix(int qA, int qB) const;
+
+  struct QubitSuperpositionInfo {
+    int qubit;
+    double prob0;
+    double prob1;
+    double superpositionDegree; // 4 * p0 * p1 in [0, 1]
+    double relativePhase;        // in degrees [0, 360)
+    std::complex<double> amp0;
+    std::complex<double> amp1;
+    bool isSuperposition;
+  };
+  QVector<QubitSuperpositionInfo> getQubitSuperpositionList() const;
+
+  struct BasisStateComponent {
+    int basisIndex;
+    QString binaryString;
+    double probability;
+    double phase; // in degrees [0, 360)
+    std::complex<double> amplitude;
+  };
+  QVector<BasisStateComponent>
+  getActiveSuperpositionComponents(double threshold = 1e-4) const;
+
+  struct EntanglementLinkInfo {
+    int qubit1;
+    int qubit2;
+    double concurrence;
+  };
+  QVector<EntanglementLinkInfo>
+  getAllEntanglementLinks(double threshold = 1e-3) const;
+
   int getCircuitDepth() const;
   int getGateCount() const;
   int getTotalSteps() const;

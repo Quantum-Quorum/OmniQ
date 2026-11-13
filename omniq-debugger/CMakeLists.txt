@@ -4,7 +4,7 @@ project(OmniQ-Debugger VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set(CMAKE_PREFIX_PATH "/opt/homebrew")
+list(APPEND CMAKE_PREFIX_PATH "/opt/homebrew" "/usr/local")
 
 # Find Qt6
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets OpenGL OpenGLWidgets)

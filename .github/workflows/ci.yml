@@ -31,7 +31,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.9'
+          python-version: '3.11'
 
       - name: Build Python Wheel
         run: |
@@ -84,11 +84,16 @@ jobs:
       # Note: macdeployqt skipped in CI for simplicity unless properly set up, 
       # but we can zip the .app
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       - name: Build Python Wheel
         run: |
           cd omniq-python
           pip install build
-          python3 -m build
+          python -m build
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4

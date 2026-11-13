@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Dependencies
-        run: brew install eigen
+        run: brew install eigen googletest
 
 
       - name: Install Qt

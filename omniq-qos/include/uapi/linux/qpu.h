@@ -77,11 +77,22 @@ typedef int64_t  __s64;
 #define QPU_JOB_FLAG_ACTIVE_RESET          0x00000002 /* Active resonator reset rather than thermal wait */
 #define QPU_JOB_FLAG_RETURN_STATEVECTOR    0x00000004 /* Debug mode: return full amplitudes if simulator */
 
+/* QPU Partition Status */
+#define QPU_PARTITION_STATUS_IDLE          0x00
+#define QPU_PARTITION_STATUS_RUNNING       0x01
+#define QPU_PARTITION_STATUS_SUSPENDED     0x02
+#define QPU_PARTITION_STATUS_ERROR         0x03
+
+/* QPU Qubit Reset Modes */
+#define QPU_RESET_MODE_THERMAL             0x00 /* Wait for thermal relaxation (e.g. 5x T1) */
+#define QPU_RESET_MODE_ACTIVE              0x01 /* Microwave resonator active un-computation pulse */
+
 /* Maximum limits for ABI stability */
 #define QPU_MAX_PHYSICAL_QUBITS            1024
 #define QPU_MAX_COUPLER_EDGES              4096
 #define QPU_MAX_ACTIVE_PARTITIONS          64
 #define QPU_MAX_NAME_LEN                   64
+#define QPU_MAX_QUBITS_PER_PARTITION       64
 
 /* ========================================================================= */
 /* IOCTL 0x01: Query Hardware Topology & Static Properties                  */
@@ -184,6 +195,59 @@ struct qpu_result_req {
     __u32 max_entries_capacity;
 };
 #define QPU_IOCTL_READ_RESULTS      _IOWR(QPU_IOCTL_MAGIC, 0x06, struct qpu_result_req)
+
+/* ========================================================================= */
+/* IOCTL 0x07: Query Active Spatial Partitions (QMMU Multi-Tenancy)          */
+/* ========================================================================= */
+
+struct qpu_partition_entry {
+    __u32 partition_id;
+    __u32 process_id;
+    __u32 num_virtual_qubits;
+    __u32 num_physical_qubits;
+    __u32 num_guard_qubits;
+    __u32 flags;                   /* QPU_ALLOC_FLAG_* */
+    __u32 avg_fidelity_ppm;        /* Average 2Q coupler fidelity in PPM */
+    __u32 status;                  /* QPU_PARTITION_STATUS_* */
+    __u32 physical_qubits[QPU_MAX_QUBITS_PER_PARTITION];
+    __u32 guard_qubits[QPU_MAX_QUBITS_PER_PARTITION];
+};
+
+struct qpu_partition_query {
+    __u32 num_partitions;          /* [OUTPUT] Total active partitions */
+    __u32 max_partitions_capacity; /* Capacity of partitions_buffer_ptr */
+    __u64 partitions_buffer_ptr;   /* Pointer to array of struct qpu_partition_entry */
+};
+#define QPU_IOCTL_QUERY_PARTITIONS  _IOWR(QPU_IOCTL_MAGIC, 0x07, struct qpu_partition_query)
+
+/* ========================================================================= */
+/* IOCTL 0x08: Query Cryogenic Dilution Refrigerator Telemetry               */
+/* ========================================================================= */
+
+struct qpu_cryo_telemetry {
+    __u64 timestamp_ns;            /* Telemetry sample epoch timestamp */
+    __u32 stage_50k_mk;            /* 50K Stage temperature in millikelvin */
+    __u32 stage_4k_mk;             /* 4K Stage temperature in millikelvin */
+    __u32 stage_still_mk;          /* Still Stage temperature in millikelvin */
+    __u32 stage_cold_plate_mk;     /* Cold Plate Stage temperature in millikelvin */
+    __u32 stage_mxc_mk;            /* Mixing Chamber (MXC) temperature in millikelvin */
+    __u32 stage_mxc_uk;            /* Mixing Chamber temperature in microkelvin (e.g. 14250 = 14.250 mK) */
+    __u32 vacuum_pressure_ubar;    /* Cryostat vacuum pressure in microbar */
+    __u32 is_cryo_ready;           /* 1 = Base temperature nominal (<50 mK), 0 = Warm / Maintenance */
+};
+#define QPU_IOCTL_QUERY_CRYO        _IOR(QPU_IOCTL_MAGIC, 0x08, struct qpu_cryo_telemetry)
+
+/* ========================================================================= */
+/* IOCTL 0x09: Dispatch Active Resonator / Microwave Qubit Reset             */
+/* ========================================================================= */
+
+struct qpu_reset_qubit_req {
+    __u32 physical_id;             /* Physical qubit to reset */
+    __u32 reset_mode;              /* QPU_RESET_MODE_* */
+    __u32 duration_ns;             /* [OUTPUT] Duration taken for reset pulse sequence */
+    __u32 success;                 /* [OUTPUT] 1 = successfully reset to |0>, 0 = error */
+};
+#define QPU_IOCTL_RESET_QUBIT       _IOWR(QPU_IOCTL_MAGIC, 0x09, struct qpu_reset_qubit_req)
 
 #endif /* _UAPI_LINUX_QPU_H */
 

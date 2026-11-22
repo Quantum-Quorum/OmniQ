@@ -93,4 +93,17 @@ test_results/
 *.json
 *~
 *.orig
-*.rej 
+*.rej
+
+# OS Images and Distro / Live-Build large binaries
+casper/
+boot/
+initrd*
+vmlinuz*
+*.iso
+*.img
+.agents/
+docs/architecture.md
+docs/*
+Testing/
+.agents/*

@@ -11,8 +11,8 @@ __email__ = "goutham.arcot@quantum-quorum.com"
 # Import core modules
 from .circuit import Circuit
 from .noise import NoiseModel
-# from .device import Device, SimulatorDevice, QPUDevice
-# from .algorithms import GroversAlgorithm, QPE
+from .device import Device, SimulatorDevice, QPUDevice
+from .qos import QPUClient
 # from .crypto import ShorsAlgorithm, GroversCrypto
 # from .qml import VariationalCircuit, QMLModel
 # from .optimization import QAOA, VQE
@@ -59,6 +59,10 @@ __all__ = [
     # Core classes
     'Circuit',
     'NoiseModel',
+    'Device',
+    'SimulatorDevice',
+    'QPUDevice',
+    'QPUClient',
     'QuditStatevector',
     'DualRailDampingChannel',
     

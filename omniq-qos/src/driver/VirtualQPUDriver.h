@@ -46,13 +46,17 @@ public:
     int ioctlFreeQubits(struct qpu_free_req *req);
     int ioctlSubmitJob(struct qpu_submit_job *jobReq, const std::string &circuitCode);
     int ioctlReadResults(struct qpu_result_req *resReq, struct qpu_readout_entry *userEntries);
+    int ioctlQueryPartitions(struct qpu_partition_query *query, struct qpu_partition_entry *userPartitions);
+    int ioctlQueryCryo(struct qpu_cryo_telemetry *cryo);
+    int ioctlResetQubit(struct qpu_reset_qubit_req *req);
 
     QMMU &getQMMU() { return qmmu_; }
     const QMMU &getQMMU() const { return qmmu_; }
 
 private:
     void executeCircuitJob(uint64_t jobId, uint32_t partitionId, const std::string &code, uint32_t shots, uint32_t flags);
-    bool parseAndExecuteQASM(omniq::Circuit &circuit, const std::string &qasmCode, int numQubits);
+    bool parseAndExecuteQASM(omniq::Circuit &circuit, const std::string &qasmCode, int numQubits,
+                             const std::unordered_map<int, int> *v2p = nullptr);
 
     mutable std::mutex driverMutex_;
     QMMU qmmu_;

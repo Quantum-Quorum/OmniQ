@@ -16,9 +16,9 @@ int main() {
     printf(" Communicating via Linux drivers/accel/qpu/ Interface   \n");
     printf("========================================================\n\n");
 
-    // 1. Open the QPU device (or fallback to virtual accelerator)
-    printf("[1] Opening QPU device node (/dev/accel/qpu0)...\n");
-    qpu_device_t *qpu = qpu_open(":direct:");
+    // 1. Open the QPU device (connects to daemon IPC socket or falls back to virtual accelerator)
+    printf("[1] Connecting to QPU accelerator (/tmp/omniq_qpu0.sock or direct)...\n");
+    qpu_device_t *qpu = qpu_open(NULL);
     if (!qpu) {
         fprintf(stderr, "[-] Failed to open QPU device.\n");
         return 1;
@@ -54,8 +54,21 @@ int main() {
                cals[1].t1_ns / 1000.0, cals[1].t2_ns / 1000.0, cals[1].single_qubit_fidelity_ppm / 10000.0, cals[1].frequency_mhz / 1000.0);
     }
 
-    // 4. Request QMMU to allocate an isolated 2-qubit partition
-    printf("[4] Requesting QMMU Partition Allocation (num_qubits = 2, flags = ISOLATED)...\n");
+    // 4. Query Cryogenic Dilution Refrigerator Telemetry
+    printf("[4] Querying Dilution Refrigerator Telemetry (QPU_IOCTL_QUERY_CRYO)...\n");
+    struct qpu_cryo_telemetry cryo;
+    if (qpu_query_cryo(qpu, &cryo) == 0) {
+        printf("    [+] 50K Stage:         %.3f K\n", cryo.stage_50k_mk / 1000.0);
+        printf("    [+] 4K Stage:          %.3f K\n", cryo.stage_4k_mk / 1000.0);
+        printf("    [+] Still Stage:       %.3f K (%u mK)\n", cryo.stage_still_mk / 1000.0, cryo.stage_still_mk);
+        printf("    [+] Cold Plate Stage:  %.3f K (%u mK)\n", cryo.stage_cold_plate_mk / 1000.0, cryo.stage_cold_plate_mk);
+        printf("    [+] Mixing Chamber:    %.3f mK (%u uK) [Status: %s]\n\n",
+               cryo.stage_mxc_uk / 1000.0, cryo.stage_mxc_uk,
+               cryo.is_cryo_ready ? "SUPERCONDUCTING NOMINAL (<50 mK)" : "WARM / DEGRADED");
+    }
+
+    // 5. Request QMMU to allocate an isolated 2-qubit partition
+    printf("[5] Requesting QMMU Partition Allocation (num_qubits = 2, flags = ISOLATED)...\n");
     uint32_t partition_id = 0;
     int err = qpu_alloc(qpu, 2, QPU_ALLOC_FLAG_ISOLATED | QPU_ALLOC_FLAG_HIGH_FIDELITY, &partition_id);
     if (err != 0) {
@@ -63,10 +76,25 @@ int main() {
         qpu_close(qpu);
         return 1;
     }
-    printf("    [+] QMMU successfully provisioned Virtual Partition #%u\n\n", partition_id);
+    printf("    [+] QMMU successfully provisioned Virtual Partition #%u\n", partition_id);
 
-    // 5. Submit OpenQASM Bell State Circuit
-    printf("[5] Submitting Quantum Circuit to Partition #%u...\n", partition_id);
+    // 6. Query Active Spatial Partitions
+    printf("    [+] Inspecting Active Partitions (QPU_IOCTL_QUERY_PARTITIONS)...\n");
+    struct qpu_partition_entry partitions[4];
+    uint32_t num_partitions = 0;
+    if (qpu_query_partitions(qpu, partitions, 4, &num_partitions) == 0) {
+        printf("    [+] Total Active Partitions: %u\n", num_partitions);
+        for (uint32_t p = 0; p < num_partitions; ++p) {
+            printf("        -> Partition #%u (PID %u): %u virtual qubits, %u physical qubits, %u guard qubits, avg fid: %.2f%%\n",
+                   partitions[p].partition_id, partitions[p].process_id,
+                   partitions[p].num_virtual_qubits, partitions[p].num_physical_qubits,
+                   partitions[p].num_guard_qubits, partitions[p].avg_fidelity_ppm / 10000.0);
+        }
+    }
+    printf("\n");
+
+    // 7. Submit OpenQASM Bell State Circuit
+    printf("[7] Submitting Quantum Circuit to Partition #%u...\n", partition_id);
     const char *bell_circuit =
         "OPENQASM 2.0;\n"
         "include \"qelib1.inc\";\n"
@@ -87,8 +115,8 @@ int main() {
     }
     printf("    [+] Job submitted successfully -> Ticket Job ID #%llu\n\n", (unsigned long long)job_id);
 
-    // 6. Wait for measurement readout
-    printf("[6] Reading back quantum measurement bitstrings...\n");
+    // 8. Wait for measurement readout
+    printf("[8] Reading back quantum measurement bitstrings...\n");
     struct qpu_readout_entry results[16];
     uint32_t num_entries = 0;
     uint32_t total_shots = 0;
@@ -107,10 +135,16 @@ int main() {
         }
     }
 
-    // 7. Free partition and close
-    printf("\n[7] Releasing Virtual Partition #%u (Triggering active qubit reset)...\n", partition_id);
+    // 9. Free partition
+    printf("\n[9] Releasing Virtual Partition #%u (Triggering active qubit reset)...\n", partition_id);
     qpu_free(qpu, partition_id);
     printf("    [+] Partition freed back to QMMU pool.\n");
+
+    // 10. Dispatch Individual Physical Qubit Reset
+    printf("\n[10] Dispatching Active Qubit Reset on Physical Qubit 0 (QPU_IOCTL_RESET_QUBIT)...\n");
+    if (qpu_reset_qubit(qpu, 0, QPU_RESET_MODE_ACTIVE) == 0) {
+        printf("    [+] Physical Qubit 0 active microwave resonator reset succeeded (state -> |0>).\n");
+    }
 
     qpu_close(qpu);
     printf("    [+] QPU device closed. POSIX Quantum Execution Completed Successfully!\n");

@@ -62,6 +62,83 @@ class Circuit:
         self.gates.append(('CP', control, target, angle))
         return self
 
+    def s(self, qubit):
+        """Add S gate"""
+        self.gates.append(('S', qubit))
+        return self
+
+    def sdg(self, qubit):
+        """Add S-dagger gate"""
+        self.gates.append(('SDG', qubit))
+        return self
+
+    def t(self, qubit):
+        """Add T gate"""
+        self.gates.append(('T', qubit))
+        return self
+
+    def tdg(self, qubit):
+        """Add T-dagger gate"""
+        self.gates.append(('TDG', qubit))
+        return self
+
+    def p(self, qubit, angle):
+        """Add Phase/P gate"""
+        self.gates.append(('P', qubit, angle))
+        return self
+
+    def measure(self, qubit, cbit=None):
+        """Add measurement gate"""
+        if cbit is None:
+            cbit = qubit
+        self.gates.append(('MEASURE', qubit, cbit))
+        return self
+
+    def to_qasm(self, version: str = "2.0") -> str:
+        """Export circuit to OpenQASM representation."""
+        lines = [
+            f"OPENQASM {version};",
+            'include "qelib1.inc";',
+            f"qreg q[{self.num_qubits}];",
+            f"creg c[{self.num_qubits}];"
+        ]
+        for g in self.gates:
+            g_type = g[0]
+            if g_type == 'H':
+                lines.append(f"h q[{g[1]}];")
+            elif g_type == 'X':
+                lines.append(f"x q[{g[1]}];")
+            elif g_type == 'Y':
+                lines.append(f"y q[{g[1]}];")
+            elif g_type == 'Z':
+                lines.append(f"z q[{g[1]}];")
+            elif g_type == 'S':
+                lines.append(f"s q[{g[1]}];")
+            elif g_type == 'SDG':
+                lines.append(f"sdg q[{g[1]}];")
+            elif g_type == 'T':
+                lines.append(f"t q[{g[1]}];")
+            elif g_type == 'TDG':
+                lines.append(f"tdg q[{g[1]}];")
+            elif g_type in ('CNOT', 'CX'):
+                lines.append(f"cx q[{g[1]}], q[{g[2]}];")
+            elif g_type == 'SWAP':
+                lines.append(f"swap q[{g[1]}], q[{g[2]}];")
+            elif g_type == 'RX':
+                lines.append(f"rx({g[2]}) q[{g[1]}];")
+            elif g_type == 'RY':
+                lines.append(f"ry({g[2]}) q[{g[1]}];")
+            elif g_type == 'RZ':
+                lines.append(f"rz({g[2]}) q[{g[1]}];")
+            elif g_type in ('PHASE', 'P'):
+                lines.append(f"p({g[2]}) q[{g[1]}];")
+            elif g_type == 'CP':
+                lines.append(f"cp({g[3]}) q[{g[1]}], q[{g[2]}];")
+            elif g_type == 'MEASURE':
+                c = g[2] if len(g) > 2 and g[2] is not None else g[1]
+                lines.append(f"measure q[{g[1]}] -> c[{c}];")
+        return "\n".join(lines) + "\n"
+
     def to_dict(self):
         """Convert circuit to dictionary for serialization"""
         gate_list = []

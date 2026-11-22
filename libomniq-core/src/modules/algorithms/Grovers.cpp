@@ -174,57 +174,15 @@ std::string DiffusionGate::to_string() const {
 }
 
 void DiffusionGate::apply_diffusion_to_statevector(Statevector &state) const {
-  if (state.getNumQubits() != num_qubits_) {
-    // match check
-  }
-
-  for (int i = 0; i < num_qubits_; ++i)
-    state.applyHadamard(i);
-  for (int i = 0; i < num_qubits_; ++i)
-    state.applyPauliX(i);
-
-  // Multi-controlled Z (flip |1...1> state after X gates = flip |0...0>
-  // original) Actually, diffusion usually flips phase of |00...0> about mean?
-  // 2|s><s| - I.
-  // Implementation: H -> X -> Multi-Z -> X -> H.
-  // Multi-Z controls on 1.
-  // If we want to flip |00...0>, we X everything (to |11...1>), flip phase of
-  // |11...1>, then X back. That's what Lines 179-196 in original code did.
-
   auto &vec = state.getStateVector();
-  // Manual phase flip of |1...1> state (index 2^N - 1)
-  // Or flip |0...0> if we are in X-basis?
-  // Original code flipped index 0 (state[0] = -state[0]) after X.
-  // If we apply X to |0>, we get |1>. So index 0 becomes index 2^N-1.
-  // Wait, apply_pauli_x(i) flips the bits.
-  // If state was |00...0> (index 0). After X on all, it is |11...1> (index
-  // N-1). Original code: if (i == 0) state[i] = -state[i]. This flips |00...0>
-  // component. Diffuser is H (2|0><0| - I) H = 2|s><s| - I. 2|0><0| - I acts on
-  // x: if x=0 -> |0>, else -|x>. So we assume the "center" is |0>. Use X to map
-  // 0 to 1 if using multi-control Z (which acts on 11...1). But direct state
-  // access is easier.
-
-  // Just flip |0...0> phase:
-  // This is 2|0><0| - I? No, (2|0><0| - I)|0> = |0>. (2|0><0| - I)|x> = -|x>.
-  // The operator is usually I - 2|0><0| (reflection about 0) or 2|0><0| - I.
-  // Grover diffusion is 2|s><s| - I.
-  // |s> = H|0>.
-  // H (2|0><0| - I) H.
-  // So we apply H, then (2|0><0| - I), then H.
-  // (2|0><0| - I) flips phase of every state orthogonal to |0> (i.e. |x != 0>),
-  // and keeps |0> same? Or better: - (I - 2|0><0|). I - 2|0><0| flips phase of
-  // |0> and keeps others. So usually implementation is: Flip phase of |0...0>
-  // and global phase -1.
-
-  // Original implementation flipped index 0.
-  // Let's stick to that.
-
-  vec(0) = -vec(0); // Phase flip |0...0>
-
-  for (int i = 0; i < num_qubits_; ++i)
-    state.applyPauliX(i);
-  for (int i = 0; i < num_qubits_; ++i)
-    state.applyHadamard(i);
+  std::complex<double> sum = 0.0;
+  for (int i = 0; i < vec.size(); ++i) {
+    sum += vec(i);
+  }
+  std::complex<double> mean2 = 2.0 * sum / static_cast<double>(vec.size());
+  for (int i = 0; i < vec.size(); ++i) {
+    vec(i) = mean2 - vec(i);
+  }
 }
 
 // Utility functions implementation
@@ -287,7 +245,7 @@ int calculate_optimal_iterations(int num_qubits, int num_solutions) {
     return 0;
   int N = 1 << num_qubits;
   double theta = std::asin(std::sqrt(static_cast<double>(num_solutions) / N));
-  int optimal_iterations = static_cast<int>(std::round(M_PI / (4.0 * theta)));
+  int optimal_iterations = static_cast<int>(std::round((M_PI / (2.0 * theta) - 1.0) / 2.0));
   return std::max(1, optimal_iterations);
 }
 

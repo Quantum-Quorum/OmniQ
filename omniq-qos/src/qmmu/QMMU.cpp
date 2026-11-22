@@ -125,6 +125,28 @@ double QMMU::scoreCandidateCluster(const std::vector<int> &cluster) const {
     for (int q : cluster) {
         score += nodes_[q].t1_us * 0.3 + nodes_[q].t2_us * 0.4 - (nodes_[q].singleQubitError * 10000.0);
     }
+
+    // Coupler fidelity scoring: incorporate internal 2Q coupler fidelities
+    std::unordered_set<int> inCluster(cluster.begin(), cluster.end());
+    double internalCouplerFidelitySum = 0.0;
+    int internalCouplerCount = 0;
+    for (const auto &edge : edges_) {
+        if (inCluster.count(edge.q1) && inCluster.count(edge.q2)) {
+            internalCouplerFidelitySum += edge.fidelity;
+            internalCouplerCount++;
+        }
+    }
+
+    if (cluster.size() > 1) {
+        if (internalCouplerCount > 0) {
+            double avgFid = internalCouplerFidelitySum / internalCouplerCount;
+            // 2Q fidelity is crucial in NISQ/FTQC: reward high coupler fidelity
+            score += avgFid * 100.0 * internalCouplerCount;
+        } else {
+            // Disconnected cluster: heavily penalize
+            score -= 1000.0;
+        }
+    }
     return score;
 }
 
@@ -167,31 +189,49 @@ std::vector<int> QMMU::findBestConnectedCluster(int requiredQubits, uint32_t fla
         }
 
         if (static_cast<int>(currentCluster.size()) == requiredQubits) {
+            // Strict Multi-Tenant Boundary Check
+            bool valid = true;
+            std::unordered_set<int> inCluster(currentCluster.begin(), currentCluster.end());
+            std::unordered_set<int> clusterGuards;
+
+            for (int node : currentCluster) {
+                for (int nbr : nodes_[node].neighbors) {
+                    if (inCluster.find(nbr) == inCluster.end()) {
+                        // External neighbor
+                        if (nodes_[nbr].state == QubitState::ALLOCATED) {
+                            // DIRECT CROSSTALK COLLISION: Neighbor is allocated to another tenant!
+                            valid = false;
+                            break;
+                        }
+                        if (isolated) {
+                            if (nodes_[nbr].state == QubitState::DEFECTIVE) {
+                                valid = false;
+                                break;
+                            }
+                            if (nodes_[nbr].state == QubitState::FREE) {
+                                clusterGuards.insert(nbr);
+                            }
+                        }
+                    }
+                }
+                if (!valid) break;
+            }
+
+            if (!valid) continue;
+
             double s = scoreCandidateCluster(currentCluster);
             if (s > bestScore) {
                 bestScore = s;
                 bestCluster = currentCluster;
+                if (isolated) {
+                    outGuards.assign(clusterGuards.begin(), clusterGuards.end());
+                }
             }
         }
     }
 
     if (bestCluster.empty()) {
         return {};
-    }
-
-    // Determine guard band perimeter if isolated flag is set
-    if (isolated) {
-        std::unordered_set<int> inCluster(bestCluster.begin(), bestCluster.end());
-        std::unordered_set<int> guardSet;
-
-        for (int q : bestCluster) {
-            for (int nbr : nodes_[q].neighbors) {
-                if (inCluster.find(nbr) == inCluster.end() && nodes_[nbr].state == QubitState::FREE) {
-                    guardSet.insert(nbr);
-                }
-            }
-        }
-        outGuards.assign(guardSet.begin(), guardSet.end());
     }
 
     return bestCluster;
@@ -249,14 +289,18 @@ bool QMMU::freePartition(uint32_t partitionId) {
 
     // Free physical data qubits
     for (int q : it->second.physicalQubits) {
-        nodes_[q].state = QubitState::FREE;
-        nodes_[q].partitionOwner = -1;
+        if (nodes_[q].partitionOwner == static_cast<int>(partitionId)) {
+            nodes_[q].state = QubitState::FREE;
+            nodes_[q].partitionOwner = -1;
+        }
     }
 
     // Free guard band qubits
     for (int g : it->second.guardQubits) {
-        nodes_[g].state = QubitState::FREE;
-        nodes_[g].partitionOwner = -1;
+        if (nodes_[g].partitionOwner == static_cast<int>(partitionId)) {
+            nodes_[g].state = QubitState::FREE;
+            nodes_[g].partitionOwner = -1;
+        }
     }
 
     partitions_.erase(it);

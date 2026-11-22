@@ -29,7 +29,7 @@ private:
 
 public:
     // Constructors
-    explicit Statevector(int numQubits);
+    explicit Statevector(int numQubits = 0);
     explicit Statevector(const VectorXcd& amplitudes);
     Statevector(const Statevector& other);
     Statevector& operator=(const Statevector& other);

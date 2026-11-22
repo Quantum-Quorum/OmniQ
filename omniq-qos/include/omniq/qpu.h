@@ -10,6 +10,7 @@
 
 #include "../uapi/linux/qpu.h"
 #include <stddef.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,6 +29,11 @@ qpu_device_t *qpu_open(const char *dev_path);
  * Close and release resources associated with the QPU device handle.
  */
 void qpu_close(qpu_device_t *dev);
+
+/**
+ * Returns true if the device is communicating over UNIX domain socket IPC.
+ */
+bool qpu_is_ipc(qpu_device_t *dev);
 
 /**
  * Query physical chip topology and 2-qubit coupler connectivity graph.
@@ -96,6 +102,34 @@ int qpu_run_sync(qpu_device_t *dev, uint32_t num_qubits, const char *qasm_str,
  * Human-readable string for QPU technology type.
  */
 const char *qpu_tech_name(uint32_t tech);
+
+/**
+ * Query active multi-tenant spatial partitions from QMMU.
+ * @param dev QPU handle
+ * @param partitions Buffer to receive partition entry records
+ * @param max_partitions Capacity of partitions buffer
+ * @param out_num_partitions Pointer to receive count of active partitions
+ * @return 0 on success, negative errno on failure.
+ */
+int qpu_query_partitions(qpu_device_t *dev, struct qpu_partition_entry *partitions,
+                         uint32_t max_partitions, uint32_t *out_num_partitions);
+
+/**
+ * Query cryogenic dilution refrigerator temperatures and vacuum levels.
+ * @param dev QPU handle
+ * @param cryo Pointer to struct to receive telemetry data
+ * @return 0 on success, negative errno on failure.
+ */
+int qpu_query_cryo(qpu_device_t *dev, struct qpu_cryo_telemetry *cryo);
+
+/**
+ * Perform active microwave or thermal reset on a specific physical qubit.
+ * @param dev QPU handle
+ * @param physical_id Physical qubit index
+ * @param reset_mode QPU_RESET_MODE_THERMAL or QPU_RESET_MODE_ACTIVE
+ * @return 0 on success, negative errno on failure.
+ */
+int qpu_reset_qubit(qpu_device_t *dev, uint32_t physical_id, uint32_t reset_mode);
 
 #ifdef __cplusplus
 }

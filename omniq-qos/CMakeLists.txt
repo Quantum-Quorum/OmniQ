@@ -7,6 +7,7 @@ set(CMAKE_C_STANDARD 11)
 
 include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/libomniq-core/include
 )
 
@@ -14,6 +15,7 @@ include_directories(
 add_library(omniq-qmmu STATIC
     src/qmmu/QMMU.cpp
     src/driver/VirtualQPUDriver.cpp
+    src/daemon/DaemonServer.cpp
 )
 target_link_libraries(omniq-qmmu PUBLIC omniq-core Threads::Threads)
 
@@ -39,3 +41,9 @@ add_executable(posix_qpu_client
     examples/posix_qpu_client.c
 )
 target_link_libraries(posix_qpu_client PRIVATE omniq-qpu Threads::Threads)
+
+# 5. Administrative QPU Management Tool (qpu-smi)
+add_executable(qpu-smi
+    src/tools/qpu-smi/qpu_smi.cpp
+)
+target_link_libraries(qpu-smi PRIVATE omniq-qpu Threads::Threads)

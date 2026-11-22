@@ -14,15 +14,17 @@ namespace omniq {
 
 Statevector::Statevector(int numQubits)
     : numQubits_(numQubits)
-    , stateVector_(static_cast<int>(std::pow(2, numQubits)))
+    , stateVector_((numQubits > 0) ? static_cast<int>(std::pow(2, numQubits)) : 0)
 {
-    if (numQubits <= 0) {
-        throw std::invalid_argument("Number of qubits must be positive");
+    if (numQubits < 0) {
+        throw std::invalid_argument("Number of qubits must be non-negative");
     }
     
-    // Initialize to |0...0⟩ state
-    stateVector_.setZero();
-    stateVector_(0) = 1.0;
+    if (numQubits > 0) {
+        // Initialize to |0...0⟩ state
+        stateVector_.setZero();
+        stateVector_(0) = 1.0;
+    }
 }
 
 Statevector::Statevector(const VectorXcd& amplitudes)

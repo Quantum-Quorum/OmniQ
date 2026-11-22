@@ -546,6 +546,17 @@ MatrixXcd Circuit::createTwoQubitGate(const Matrix4cd &gate, int qubit1,
 }
 
 void Circuit::validateGate(const Gate &gate) const {
+  if (gate.type == GateType::MEASURE) {
+    if (gate.targetQubits.empty()) {
+      throw std::invalid_argument("Measure gate requires a target qubit");
+    }
+    validateQubitIndex(gate.targetQubits[0]);
+    if (!gate.controlQubits.empty()) {
+      validateClassicalBitIndex(gate.controlQubits[0]);
+    }
+    return;
+  }
+
   // Validate target qubits
   for (int qubit : gate.targetQubits) {
     validateQubitIndex(qubit);

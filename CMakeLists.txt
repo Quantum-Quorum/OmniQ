@@ -110,6 +110,13 @@ target_link_libraries(omniq PRIVATE omniq-core)
 # OmniQ-QOS: Quantum Operating System Subsystem (drivers/accel/qpu, QMMU, omniqd, libomniq-qpu)
 add_subdirectory(omniq-qos)
 
+if(BUILD_TESTING)
+    add_executable(test_qos tests/test_qos.cpp)
+    target_include_directories(test_qos PRIVATE omniq-qos/include omniq-qos/src libomniq-core/include)
+    target_link_libraries(test_qos PRIVATE omniq-qmmu omniq-qpu omniq-core GTest::gtest GTest::gtest_main Threads::Threads)
+    add_test(NAME QoSTest COMMAND test_qos)
+endif()
+
 # Install targets
 install(TARGETS omniq-core
     EXPORT OmniQTargets
